@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, FileUp, Sheet, StickyNote } from "lucide-react";
+import { Download, FileUp, RefreshCw, Sheet, StickyNote } from "lucide-react";
 import { getStorageModeLabel } from "@/lib/storage/get-repository";
 import { ExportPanel } from "@/components/settings/export-panel";
 import { GoogleSheetsPanel } from "@/components/settings/google-sheets-panel";
 import { NotionPanel } from "@/components/settings/notion-panel";
+import { RecurringPanel } from "@/components/settings/recurring-panel";
 import { useExpenses } from "@/components/expenses/expenses-provider";
 import { getExpenseRepository } from "@/lib/storage/get-repository";
 import { cn } from "@/lib/utils";
 
-type SettingsTab = "general" | "export" | "google" | "notion";
+type SettingsTab = "general" | "recurring" | "export" | "google" | "notion";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -19,6 +20,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 const TABS: Array<{ id: SettingsTab; label: string; icon: React.ReactNode }> = [
   { id: "general", label: "عام", icon: <Download className="h-4 w-4" /> },
+  { id: "recurring", label: "متكررة", icon: <RefreshCw className="h-4 w-4" /> },
   { id: "export", label: "تصدير", icon: <FileUp className="h-4 w-4" /> },
   { id: "google", label: "Google Sheets", icon: <Sheet className="h-4 w-4" /> },
   { id: "notion", label: "Notion", icon: <StickyNote className="h-4 w-4" /> },
@@ -156,6 +158,7 @@ export function SettingsClient() {
         </div>
       )}
 
+      {tab === "recurring" && <RecurringPanel />}
       {tab === "export" && <ExportPanel />}
       {tab === "google" && <GoogleSheetsPanel />}
       {tab === "notion" && <NotionPanel />}

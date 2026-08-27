@@ -163,3 +163,42 @@ describe("export", () => {
     expect(toSheetMatrix(selected)[0]?.[0]).toBe("التاريخ");
   });
 });
+
+describe("recurring", () => {
+  it("creates drafts for matching day when not already logged", async () => {
+    const { draftsDueToday } = await import("../recurring");
+    const drafts = draftsDueToday(
+      [
+        {
+          id: "r1",
+          title: "إيجار",
+          amount: 3000,
+          tags: ["منزل"],
+          dayOfMonth: 27,
+          active: true,
+          notes: null,
+        },
+        {
+          id: "r2",
+          title: "نت",
+          amount: 200,
+          tags: ["فواتير"],
+          dayOfMonth: 1,
+          active: true,
+          notes: null,
+        },
+      ],
+      [],
+      "2026-08-27",
+    );
+    expect(drafts).toHaveLength(1);
+    expect(drafts[0]?.itemName).toBe("إيجار");
+  });
+});
+
+describe("tags", () => {
+  it("returns stable colors for default tags", async () => {
+    const { colorForTag } = await import("../tags");
+    expect(colorForTag("طعام")).toBe("#ef4444");
+  });
+});

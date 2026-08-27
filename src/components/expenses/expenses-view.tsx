@@ -6,6 +6,7 @@ import { withSequentialNumbers } from "@/core/expense-filters";
 import { DEFAULT_TAGS, type CurrencyCode } from "@/core/types";
 import { useExpenses } from "@/components/expenses/expenses-provider";
 import { ExpensesTable } from "@/components/expenses/expenses-table";
+import { ReceiptScanButton } from "@/components/expenses/receipt-scan-button";
 import { useCallback, useMemo, useState } from "react";
 
 export function ExpensesView({ compact = false }: { compact?: boolean }) {
@@ -130,14 +131,17 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
           </select>
         </div>
 
-        <button
-          type="button"
-          onClick={() => void handleAdd()}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-sm)] hover:opacity-90"
-        >
-          <Plus className="h-4 w-4" />
-          إضافة مصروف
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <ReceiptScanButton />
+          <button
+            type="button"
+            onClick={() => void handleAdd()}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-sm)] hover:opacity-90"
+          >
+            <Plus className="h-4 w-4" />
+            إضافة مصروف
+          </button>
+        </div>
       </div>
 
       <ExpensesTable

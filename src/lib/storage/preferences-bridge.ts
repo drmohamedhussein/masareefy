@@ -20,7 +20,8 @@ import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 
 /** Same key as LocalExpenseRepository (`local-repository.ts`). */
-export const PREFERENCES_STORAGE_KEY = "Masareefy.v1";
+export const PREFERENCES_STORAGE_KEY = "masareefy.v1";
+export const LEGACY_PREFERENCES_KEY = "Masareefy.v1";
 
 export function isNativeAndroid(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
@@ -33,7 +34,9 @@ export function isNativeAndroid(): boolean {
 export async function mirrorLocalStorageToPreferences(): Promise<void> {
   if (!isNativeAndroid() || typeof window === "undefined") return;
 
-  const raw = window.localStorage.getItem(PREFERENCES_STORAGE_KEY);
+  const raw =
+    window.localStorage.getItem(PREFERENCES_STORAGE_KEY) ??
+    window.localStorage.getItem(LEGACY_PREFERENCES_KEY);
   if (raw == null) return;
 
   await Preferences.set({ key: PREFERENCES_STORAGE_KEY, value: raw });
@@ -45,7 +48,9 @@ export async function mirrorLocalStorageToPreferences(): Promise<void> {
 export async function hydrateLocalStorageFromPreferences(): Promise<void> {
   if (!isNativeAndroid() || typeof window === "undefined") return;
 
-  const existing = window.localStorage.getItem(PREFERENCES_STORAGE_KEY);
+  const existing =
+    window.localStorage.getItem(PREFERENCES_STORAGE_KEY) ??
+    window.localStorage.getItem(LEGACY_PREFERENCES_KEY);
   if (existing != null) return;
 
   const { value } = await Preferences.get({ key: PREFERENCES_STORAGE_KEY });

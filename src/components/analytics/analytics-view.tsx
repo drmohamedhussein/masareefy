@@ -15,6 +15,7 @@ import {
   resolveDateRange,
   summarizeAnalytics,
   todayISO,
+  colorForTag,
 } from "@/core";
 import type { CurrencyCode, DatePreset } from "@/core/types";
 import { useExpenses } from "@/components/expenses/expenses-provider";
@@ -190,7 +191,14 @@ export function AnalyticsView() {
           <ul className="divide-y divide-[var(--border)] text-sm">
             {summary.byTag.map((row) => (
               <li key={row.tag} className="flex items-center justify-between py-2">
-                <span>{row.tag} · {row.count}</span>
+                <span className="inline-flex items-center gap-2">
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: colorForTag(row.tag) }}
+                    aria-hidden
+                  />
+                  {row.tag} · {row.count}
+                </span>
                 <span className="font-semibold tabular-nums">
                   {formatMoney(row.total, currency)}
                 </span>

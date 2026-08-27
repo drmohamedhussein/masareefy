@@ -10,6 +10,7 @@ import type {
   RecurringExpense,
 } from "@/core/types";
 import type { ExpenseRepository } from "@/core/repository";
+import { mirrorLocalStorageToPreferences } from "@/lib/storage/preferences-bridge";
 
 const STORAGE_KEY = "masareefy.v1";
 const LEGACY_KEY = "Masareefy.v1";
@@ -84,6 +85,7 @@ function readStore(): LocalStore {
 function writeStore(store: LocalStore): void {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+  void mirrorLocalStorageToPreferences();
 }
 
 function createId(prefix = "exp"): string {

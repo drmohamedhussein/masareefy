@@ -24,6 +24,8 @@ import { todayISO } from "@/core/date-range";
 import { getExpenseRepository } from "@/lib/storage/get-repository";
 import { syncExpensesEverywhere } from "@/lib/sync/everywhere";
 import { normalizeTags } from "@/core/export";
+import { draftsDueToday } from "@/core/recurring";
+import { initPreferencesBridge } from "@/lib/storage/preferences-bridge";
 
 interface PendingUndo {
   expense: Expense;
@@ -88,8 +90,20 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
   }, [repo]);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void (async () => {
+      await initPreferencesBridge();
+      const recurring = (await repo.listRecurring?.()) ?? [];
+      const rows = await repo.listExpenses();
+      const due = draftsDueToday(recurring, rows);
+      for (const draft of due) {
+        await repo.createExpense(draft);
+      }
+      if (due.length > 0) {
+        await syncExpensesEverywhere(await repo.listExpenses());
+      }
+      await refresh();
+    })();
+  }, [repo, refresh]);
 
   useEffect(() => {
     undoRef.current = pendingUndo;
