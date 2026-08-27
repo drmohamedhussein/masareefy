@@ -8,7 +8,7 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-const DISMISS_KEY = "masroofy.install.dismissed";
+const DISMISS_KEY = "Masareefy.install.dismissed";
 
 function isStandalone(): boolean {
   if (typeof window === "undefined") return false;
@@ -68,7 +68,7 @@ export function InstallAppBanner() {
           <Download className="h-4 w-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">ثبّت مصروفي على جهازك</p>
+          <p className="text-sm font-semibold">ثبّت مصاريفي على جهازك</p>
           <p className="mt-1 text-xs leading-6 text-[var(--muted-foreground)]">
             {iosHint
               ? "من Safari: شارك ← إضافة إلى الشاشة الرئيسية"

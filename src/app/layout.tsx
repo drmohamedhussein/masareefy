@@ -10,7 +10,7 @@ const ibmPlexArabic = IBM_Plex_Sans_Arabic({
   weight: ["400", "500", "600", "700"],
 });
 
-const APP_NAME = "مصروفي";
+const APP_NAME = "مصاريفي";
 const APP_DESCRIPTION =
   "تطبيق عربي لتتبع المصروفات الشخصية بواجهة شبيهة بـ Notion — قابل للتثبيت على الجهاز";
 

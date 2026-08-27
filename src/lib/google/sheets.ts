@@ -1,7 +1,7 @@
 import type { Expense } from "@/core/types";
 import { toSheetMatrix } from "@/core/export";
 
-const STORAGE_KEY = "masroofy.google.sheets.v1";
+const STORAGE_KEY = "Masareefy.google.sheets.v1";
 const SCOPES =
   "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file";
 
@@ -69,7 +69,7 @@ function loadGisScript(): Promise<void> {
 
   return new Promise((resolve, reject) => {
     const existing = document.querySelector<HTMLScriptElement>(
-      'script[data-masroofy-gis="1"]',
+      'script[data-Masareefy-gis="1"]',
     );
     if (existing) {
       existing.addEventListener("load", () => resolve());
@@ -81,7 +81,7 @@ function loadGisScript(): Promise<void> {
     script.src = "https://accounts.google.com/gsi/client";
     script.async = true;
     script.defer = true;
-    script.dataset.masroofyGis = "1";
+    script.dataset.MasareefyGis = "1";
     script.onload = () => resolve();
     script.onerror = () => reject(new Error("تعذر تحميل تسجيل دخول Google"));
     document.head.appendChild(script);
@@ -174,9 +174,9 @@ async function sheetsFetch(
   });
 }
 
-export async function createMasroofySpreadsheet(
+export async function createMasareefySpreadsheet(
   accessToken: string,
-  title = "مصروفي - المصروفات",
+  title = "مصاريفي - المصروفات",
 ): Promise<{ spreadsheetId: string; spreadsheetUrl: string; title: string }> {
   const response = await sheetsFetch("spreadsheets", {
     method: "POST",

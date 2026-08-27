@@ -1,50 +1,27 @@
-# مصروفي (Masroofy)
+# مصاريفي (Masareefy)
 
-تطبيق عربي لتتبع المصروفات — ويب قابل للتثبيت (PWA)، مع مسار لاحق لأندرويد وWordPress.
+تطبيق عربي لتتبع المصاريف الشخصية — جدول Notion-like · وسوم · تقويم · إحصاءات · PWA · مزامنة Google Sheets وNotion.
 
-## الوصول الدائم (موصى به)
-
-الأفضل **نشر التطبيق على Vercel مربوط بـ GitHub**:
-- رابط ثابت يعمل من أي جهاز بدون تشغيل كمبيوتر
-- كل `git push` يحدّث النسخة اللايف تلقائيًا
-- ثبّته كتطبيق من الرابط اللايف (PWA)
-
-البديل المحلي فقط: شغّل `scripts/start-masroofy.cmd` أو اجعل `scripts/autostart-masroofy.cmd` يعمل مع بدء ويندوز.
-
-## ما يعمل الآن
-
-- جدول مصروفات شبيه بـ Notion + تقويم + إحصاءات
-- تصدير Excel / PDF / Google Sheets + مزامنة اختيارية
-- تثبيت على الجهاز كتطبيق (PWA)
-- حفظ محلي بدون إعدادات معقدة
-- جاهزية لاحقًا: أندرويد (Capacitor) وبلجن WordPress
-
-## التشغيل المحلي للتطوير
+## الاستخدام السريع محليًا
 
 ```bash
-cd masroofy
 npm install
 npm run dev
 ```
 
-افتح [http://localhost:3737](http://localhost:3737)
+افتح http://localhost:3737
 
-> منفذ المشروع الخاص **مصروفي**: `3737` (بدل 3000).
+## المزامنة التلقائية
 
-## الأوامر
+- **Google Sheets**: الإعدادات → Google Sheets → ربط Gmail → إنشاء جدول (يتطلب Client ID).
+- **Notion**: الإعدادات → Notion → Integration Token + Database ID.
 
-| الأمر | الوصف |
-| --- | --- |
-| `npm run dev` | تطوير على المنفذ 3737 |
-| `npm run build` | بناء الإنتاج |
-| `npm run start` | تشغيل البناء على 3737 |
-| `npm test` | اختبارات |
-| `npm run icons` | إعادة توليد أيقونات التطبيق |
+كل إضافة/تعديل/حذف يُزامن تلقائيًا للوجهات المربوطة.
 
-## أندرويد لاحقًا
+## أعمدة الجدول
 
-انظر `android/README.md`.
+`#` · السعر · اسم المشتريات · التصنيف (وسوم) · ملاحظات
 
-## WordPress لاحقًا
+## GitHub
 
-انظر `wordpress/README.md`.
+https://github.com/drmohamedhussein/masareefy

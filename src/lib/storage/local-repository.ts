@@ -1,20 +1,24 @@
 import { filterExpenses } from "@/core/expense-filters";
 import { todayISO } from "@/core/date-range";
+import { normalizeTags } from "@/core/export";
 import type {
   CurrencyCode,
   Expense,
   ExpenseDraft,
   ExpenseQuery,
   Profile,
+  RecurringExpense,
 } from "@/core/types";
 import type { ExpenseRepository } from "@/core/repository";
 
-const STORAGE_KEY = "masroofy.v1";
+const STORAGE_KEY = "masareefy.v1";
+const LEGACY_KEY = "Masareefy.v1";
 const LOCAL_USER_ID = "local-user";
 
 interface LocalStore {
   profile: Profile;
   expenses: Expense[];
+  recurring: RecurringExpense[];
 }
 
 function defaultStore(): LocalStore {
@@ -25,9 +29,25 @@ function defaultStore(): LocalStore {
       displayName: "أنا",
       currency: "EGP",
       timezone: "Africa/Cairo",
+      monthlyBudget: null,
       createdAt: now,
     },
     expenses: [],
+    recurring: [],
+  };
+}
+
+function migrateExpense(raw: Partial<Expense> & { id: string }): Expense {
+  return {
+    id: raw.id,
+    userId: raw.userId ?? LOCAL_USER_ID,
+    amount: raw.amount ?? null,
+    itemName: raw.itemName ?? "",
+    tags: normalizeTags(raw.tags),
+    notes: raw.notes ?? null,
+    spentOn: raw.spentOn ?? todayISO(),
+    createdAt: raw.createdAt ?? new Date().toISOString(),
+    updatedAt: raw.updatedAt ?? new Date().toISOString(),
   };
 }
 
@@ -35,13 +55,27 @@ function readStore(): LocalStore {
   if (typeof window === "undefined") return defaultStore();
 
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw =
+      window.localStorage.getItem(STORAGE_KEY) ??
+      window.localStorage.getItem(LEGACY_KEY);
     if (!raw) return defaultStore();
-    const parsed = JSON.parse(raw) as LocalStore;
+    const parsed = JSON.parse(raw) as Partial<LocalStore> & {
+      expenses?: Array<Partial<Expense> & { id: string }>;
+    };
     if (!parsed?.profile || !Array.isArray(parsed.expenses)) {
       return defaultStore();
     }
-    return parsed;
+    const store: LocalStore = {
+      profile: {
+        ...defaultStore().profile,
+        ...parsed.profile,
+        monthlyBudget: parsed.profile.monthlyBudget ?? null,
+      },
+      expenses: parsed.expenses.map(migrateExpense),
+      recurring: Array.isArray(parsed.recurring) ? parsed.recurring : [],
+    };
+    writeStore(store);
+    return store;
   } catch {
     return defaultStore();
   }
@@ -52,17 +86,13 @@ function writeStore(store: LocalStore): void {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
 }
 
-function createId(): string {
+function createId(prefix = "exp"): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
-  return `exp_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
-/**
- * Browser localStorage implementation of ExpenseRepository.
- * Same contract will be reimplemented in PHP for the WordPress plugin.
- */
 export class LocalExpenseRepository implements ExpenseRepository {
   async listExpenses(query: ExpenseQuery = {}): Promise<Expense[]> {
     const { expenses } = readStore();
@@ -82,6 +112,7 @@ export class LocalExpenseRepository implements ExpenseRepository {
       userId: LOCAL_USER_ID,
       amount: draft.amount != null && draft.amount > 0 ? draft.amount : null,
       itemName: draft.itemName ?? "",
+      tags: normalizeTags(draft.tags),
       notes: draft.notes?.trim() ? draft.notes.trim() : null,
       spentOn: draft.spentOn || todayISO(),
       createdAt: now,
@@ -116,6 +147,7 @@ export class LocalExpenseRepository implements ExpenseRepository {
       amount: nextAmount,
       itemName:
         patch.itemName !== undefined ? patch.itemName : current.itemName,
+      tags: patch.tags !== undefined ? normalizeTags(patch.tags) : current.tags,
       notes:
         patch.notes !== undefined
           ? patch.notes?.trim()
@@ -142,7 +174,9 @@ export class LocalExpenseRepository implements ExpenseRepository {
   }
 
   async updateProfile(
-    patch: Partial<Pick<Profile, "displayName" | "currency" | "timezone">>,
+    patch: Partial<
+      Pick<Profile, "displayName" | "currency" | "timezone" | "monthlyBudget">
+    >,
   ): Promise<Profile> {
     const store = readStore();
     store.profile = {
@@ -151,14 +185,33 @@ export class LocalExpenseRepository implements ExpenseRepository {
         patch.displayName !== undefined
           ? patch.displayName
           : store.profile.displayName,
-      currency: (patch.currency as CurrencyCode | undefined) ?? store.profile.currency,
+      currency:
+        (patch.currency as CurrencyCode | undefined) ?? store.profile.currency,
       timezone: patch.timezone ?? store.profile.timezone,
+      monthlyBudget:
+        patch.monthlyBudget !== undefined
+          ? patch.monthlyBudget
+          : store.profile.monthlyBudget,
     };
     writeStore(store);
     return store.profile;
+  }
+
+  async listRecurring(): Promise<RecurringExpense[]> {
+    return readStore().recurring;
+  }
+
+  async saveRecurring(items: RecurringExpense[]): Promise<void> {
+    const store = readStore();
+    store.recurring = items;
+    writeStore(store);
   }
 }
 
 export function createLocalRepository(): ExpenseRepository {
   return new LocalExpenseRepository();
+}
+
+export function createRecurringId(): string {
+  return createId("rec");
 }

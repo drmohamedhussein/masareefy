@@ -22,7 +22,8 @@ import type {
 import { filterExpenses } from "@/core/expense-filters";
 import { todayISO } from "@/core/date-range";
 import { getExpenseRepository } from "@/lib/storage/get-repository";
-import { syncExpensesToGoogleSheets } from "@/lib/google/sheets";
+import { syncExpensesEverywhere } from "@/lib/sync/everywhere";
+import { normalizeTags } from "@/core/export";
 
 interface PendingUndo {
   expense: Expense;
@@ -36,11 +37,13 @@ interface ExpensesContextValue {
   loading: boolean;
   selectedDate: string;
   search: string;
+  tagFilter: string;
   sortKey: ExpenseSortKey;
   sortDirection: SortDirection;
   pendingUndo: PendingUndo | null;
   setSelectedDate: (date: string) => void;
   setSearch: (value: string) => void;
+  setTagFilter: (value: string) => void;
   setSort: (key: ExpenseSortKey) => void;
   refresh: () => Promise<void>;
   addExpense: (draft?: Partial<ExpenseDraft>) => Promise<Expense>;
@@ -60,6 +63,7 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [search, setSearch] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
   const [sortKey, setSortKey] = useState<ExpenseSortKey>("spentOn");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [pendingUndo, setPendingUndo] = useState<PendingUndo | null>(null);
@@ -103,10 +107,11 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
     () => ({
       spentOn: selectedDate,
       search,
+      tag: tagFilter || undefined,
       sortKey,
       sortDirection,
     }),
-    [selectedDate, search, sortKey, sortDirection],
+    [selectedDate, search, tagFilter, sortKey, sortDirection],
   );
 
   const visibleExpenses = useMemo(
@@ -130,12 +135,12 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
     setSortDirection(nextDirection);
   }, []);
 
-  const syncSheetsQuietly = useCallback(async () => {
+  const syncQuietly = useCallback(async () => {
     try {
       const rows = await repo.listExpenses();
-      await syncExpensesToGoogleSheets(rows);
+      await syncExpensesEverywhere(rows);
     } catch {
-      // الربط اختياري — لا نُظهر خطأ أثناء الإدخال السريع
+      // الربط اختياري
     }
   }, [repo]);
 
@@ -149,14 +154,15 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
               : null
             : null,
         itemName: draft.itemName ?? "",
+        tags: normalizeTags(draft.tags),
         notes: draft.notes ?? "",
         spentOn: draft.spentOn || selectedDate,
       });
       await refresh();
-      void syncSheetsQuietly();
+      void syncQuietly();
       return created;
     },
-    [repo, refresh, selectedDate, syncSheetsQuietly],
+    [repo, refresh, selectedDate, syncQuietly],
   );
 
   const updateExpense = useCallback(
@@ -174,6 +180,8 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
                 : item.amount,
             itemName:
               patch.itemName !== undefined ? patch.itemName : item.itemName,
+            tags:
+              patch.tags !== undefined ? normalizeTags(patch.tags) : item.tags,
             notes:
               patch.notes !== undefined
                 ? patch.notes?.trim()
@@ -186,9 +194,9 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
         }),
       );
       await repo.updateExpense(id, patch);
-      void syncSheetsQuietly();
+      void syncQuietly();
     },
-    [repo, syncSheetsQuietly],
+    [repo, syncQuietly],
   );
 
   const dismissUndo = useCallback(() => {
@@ -209,7 +217,7 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
 
       await repo.deleteExpense(id);
       await refresh();
-      void syncSheetsQuietly();
+      void syncQuietly();
 
       const timeoutId = setTimeout(() => {
         setPendingUndo(null);
@@ -217,7 +225,7 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
 
       setPendingUndo({ expense: target, timeoutId });
     },
-    [expenses, repo, refresh, syncSheetsQuietly],
+    [expenses, repo, refresh, syncQuietly],
   );
 
   const undoDelete = useCallback(async () => {
@@ -227,13 +235,14 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
     await repo.createExpense({
       amount: pending.expense.amount,
       itemName: pending.expense.itemName,
+      tags: pending.expense.tags,
       notes: pending.expense.notes,
       spentOn: pending.expense.spentOn,
     });
     setPendingUndo(null);
     await refresh();
-    void syncSheetsQuietly();
-  }, [repo, refresh, syncSheetsQuietly]);
+    void syncQuietly();
+  }, [repo, refresh, syncQuietly]);
 
   const updateCurrency = useCallback(
     async (currency: CurrencyCode) => {
@@ -251,11 +260,13 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
       loading,
       selectedDate,
       search,
+      tagFilter,
       sortKey,
       sortDirection,
       pendingUndo,
       setSelectedDate,
       setSearch,
+      setTagFilter,
       setSort,
       refresh,
       addExpense,
@@ -272,6 +283,7 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
       loading,
       selectedDate,
       search,
+      tagFilter,
       sortKey,
       sortDirection,
       pendingUndo,

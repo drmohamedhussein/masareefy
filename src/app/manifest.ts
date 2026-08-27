@@ -3,8 +3,8 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "مصروفي",
-    short_name: "مصروفي",
+    name: "مصاريفي",
+    short_name: "مصاريفي",
     description: "تتبع مصاريفك الشخصية بسهولة — جدول وتقويم وإحصاءات",
     start_url: "/expenses",
     scope: "/",

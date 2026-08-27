@@ -5,7 +5,7 @@ import { ExternalLink, Link2, RefreshCw, Unplug } from "lucide-react";
 import { useExpenses } from "@/components/expenses/expenses-provider";
 import {
   connectGoogleSheets,
-  createMasroofySpreadsheet,
+  createMasareefySpreadsheet,
   disconnectGoogleSheets,
   ensureGoogleAccessToken,
   isGoogleConfigured,
@@ -112,7 +112,7 @@ export function GoogleSheetsPanel() {
                 onClick={() =>
                   void run(async () => {
                     const accessToken = await ensureGoogleAccessToken();
-                    const created = await createMasroofySpreadsheet(accessToken);
+                    const created = await createMasareefySpreadsheet(accessToken);
                     const current = loadGoogleConnection();
                     if (!current) return;
                     const next = {
@@ -224,7 +224,7 @@ export function GoogleSheetsPanel() {
                 </a>{" "}
                 بنفس حساب Gmail.
               </li>
-              <li>أنشئ مشروعًا جديدًا باسم مثل «مصروفي».</li>
+              <li>أنشئ مشروعًا جديدًا باسم مثل «مصاريفي».</li>
               <li>
                 من القائمة: APIs & Services ← Library ← فعّل{" "}
                 <strong className="text-[var(--foreground)]">Google Sheets API</strong> و{" "}
@@ -232,7 +232,7 @@ export function GoogleSheetsPanel() {
               </li>
               <li>
                 APIs & Services ← OAuth consent screen ← External ← أدخل اسم التطبيق
-                «مصروفي» وبريدك ثم Save.
+                «مصاريفي» وبريدك ثم Save.
               </li>
               <li>
                 Credentials ← Create Credentials ← OAuth client ID ← Application type:{" "}
@@ -266,7 +266,7 @@ export function GoogleSheetsPanel() {
               <li>اضغط «إنشاء جدول جديد ومزامنته» — سيظهر جدول في Google Drive.</li>
               <li>اترك خيار المزامنة التلقائية مفعّلاً.</li>
               <li>
-                أي مصروف تضيفه أو تعدّله أو تحذفه في مصروفي يُحدَّث في الشيت تلقائيًا.
+                أي مصروف تضيفه أو تعدّله أو تحذفه في مصاريفي يُحدَّث في الشيت تلقائيًا.
               </li>
               <li>يمكنك فتح الجدول من الرابط الظاهر هنا في أي وقت.</li>
             </ol>

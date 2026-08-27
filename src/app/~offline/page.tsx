@@ -12,7 +12,7 @@ export default function OfflinePage() {
       <div className="max-w-md rounded-xl border border-[var(--border)] bg-white p-8 shadow-[var(--shadow-sm)]">
         <h1 className="mb-2 text-2xl font-semibold">أنت غير متصل حاليًا</h1>
         <p className="mb-6 text-sm leading-7 text-[var(--muted-foreground)]">
-          مصروفي يحاول العمل بدون إنترنت قدر الإمكان. بعد عودة الشبكة ستُحدَّث الصفحات
+          مصاريفي يحاول العمل بدون إنترنت قدر الإمكان. بعد عودة الشبكة ستُحدَّث الصفحات
           تلقائيًا.
         </p>
         <Link

@@ -16,9 +16,9 @@ create table if not exists public.profiles (
 create table if not exists public.expenses (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
-  -- السعر والاسم يمكن أن يكونا فارغين أثناء الإدخال السريع
   amount numeric(12, 2) check (amount is null or amount > 0),
   item_name text not null default '',
+  tags jsonb not null default '[]'::jsonb,
   notes text,
   spent_on date not null default (timezone('Africa/Cairo', now()))::date,
   created_at timestamptz not null default now(),

@@ -15,7 +15,7 @@ export function downloadExpensesExcel(expenses: Expense[]): void {
 
   const book = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(book, sheet, "المصروفات");
-  XLSX.writeFile(book, exportFilename("masroofy-expenses", "xlsx"));
+  XLSX.writeFile(book, exportFilename("Masareefy-expenses", "xlsx"));
 }
 
 export function downloadExpensesCsv(expenses: Expense[]): void {
@@ -29,7 +29,7 @@ export function downloadExpensesCsv(expenses: Expense[]): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = exportFilename("masroofy-expenses", "csv");
+  anchor.download = exportFilename("Masareefy-expenses", "csv");
   anchor.click();
   URL.revokeObjectURL(url);
 }

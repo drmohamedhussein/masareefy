@@ -183,6 +183,24 @@ export function AnalyticsView() {
       </section>
 
       <section className="rounded-xl border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-sm)]">
+        <h2 className="mb-3 text-sm font-medium">حسب التصنيف (الوسوم)</h2>
+        {summary.byTag.length === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">لا بيانات.</p>
+        ) : (
+          <ul className="divide-y divide-[var(--border)] text-sm">
+            {summary.byTag.map((row) => (
+              <li key={row.tag} className="flex items-center justify-between py-2">
+                <span>{row.tag} · {row.count}</span>
+                <span className="font-semibold tabular-nums">
+                  {formatMoney(row.total, currency)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-sm)]">
         <h2 className="mb-3 text-sm font-medium">أعلى المشتريات سعرًا</h2>
         {summary.topExpenses.length === 0 ? (
           <p className="text-sm text-[var(--muted-foreground)]">

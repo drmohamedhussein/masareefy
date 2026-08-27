@@ -25,6 +25,28 @@ export function buildDailyBuckets(
   return Array.from(map.values());
 }
 
+export function summarizeByTag(expenses: Expense[]): Array<{
+  tag: string;
+  total: number;
+  count: number;
+}> {
+  const map = new Map<string, { total: number; count: number }>();
+  for (const expense of expenses) {
+    const tags = expense.tags?.length ? expense.tags : ["بدون وسم"];
+    for (const tag of tags) {
+      const current = map.get(tag) ?? { total: 0, count: 0 };
+      current.count += 1;
+      if (expense.amount != null) {
+        current.total = roundMoney(current.total + expense.amount);
+      }
+      map.set(tag, current);
+    }
+  }
+  return Array.from(map.entries())
+    .map(([tag, stats]) => ({ tag, ...stats }))
+    .sort((a, b) => b.total - a.total);
+}
+
 export function summarizeAnalytics(
   expenses: Expense[],
   range: DateRange,
@@ -57,6 +79,7 @@ export function summarizeAnalytics(
     highestSpendingDay: peakDay,
     dailySpending,
     topExpenses,
+    byTag: summarizeByTag(inRange),
   };
 }
 
@@ -67,5 +90,20 @@ export function totalForExpenses(expenses: Expense[]): {
   return {
     count: expenses.length,
     total: sumAmounts(expenses.map((e) => e.amount)),
+  };
+}
+
+export function budgetProgress(
+  totalSpent: number,
+  monthlyBudget: number | null,
+): { ratio: number; remaining: number | null; over: boolean } {
+  if (monthlyBudget == null || monthlyBudget <= 0) {
+    return { ratio: 0, remaining: null, over: false };
+  }
+  const ratio = totalSpent / monthlyBudget;
+  return {
+    ratio,
+    remaining: roundMoney(monthlyBudget - totalSpent),
+    over: totalSpent > monthlyBudget,
   };
 }

@@ -11,7 +11,7 @@ import { downloadExpensesCsv, downloadExpensesExcel } from "@/lib/export/excel";
 import { downloadExpensesPdf } from "@/lib/export/pdf";
 import {
   connectGoogleSheets,
-  createMasroofySpreadsheet,
+  createMasareefySpreadsheet,
   ensureGoogleAccessToken,
   isGoogleConfigured,
   loadGoogleConnection,
@@ -146,7 +146,7 @@ export function ExportPanel() {
               const accessToken = await ensureGoogleAccessToken();
               let connection = loadGoogleConnection();
               if (!connection?.spreadsheetId) {
-                const created = await createMasroofySpreadsheet(accessToken);
+                const created = await createMasareefySpreadsheet(accessToken);
                 connection = {
                   ...(connection || {
                     accessToken,

@@ -12,12 +12,13 @@ function compareValues(
 function getSortValue(expense: Expense, key: ExpenseSortKey): string | number {
   switch (key) {
     case "amount":
-      // القيم الفارغة في الأسفل عند الترتيب تصاعديًا / الأعلى تنازليًا
       return expense.amount ?? Number.NEGATIVE_INFINITY;
     case "itemName":
       return expense.itemName.toLocaleLowerCase("ar");
     case "spentOn":
       return expense.spentOn;
+    case "tags":
+      return (expense.tags ?? []).join(",").toLocaleLowerCase("ar");
     default: {
       const _exhaustive: never = key;
       return _exhaustive;
@@ -30,6 +31,7 @@ export function filterExpenses(
   query: ExpenseQuery = {},
 ): Expense[] {
   const search = query.search?.trim().toLocaleLowerCase("ar");
+  const tag = query.tag?.trim();
   const sortKey = query.sortKey ?? "spentOn";
   const sortDirection = query.sortDirection ?? "desc";
 
@@ -37,11 +39,13 @@ export function filterExpenses(
     if (query.spentOn && expense.spentOn !== query.spentOn) return false;
     if (query.from && expense.spentOn < query.from) return false;
     if (query.to && expense.spentOn > query.to) return false;
+    if (tag && !(expense.tags ?? []).includes(tag)) return false;
 
     if (search) {
-      const haystack = `${expense.itemName} ${expense.notes ?? ""}`.toLocaleLowerCase(
-        "ar",
-      );
+      const haystack =
+        `${expense.itemName} ${expense.notes ?? ""} ${(expense.tags ?? []).join(" ")}`.toLocaleLowerCase(
+          "ar",
+        );
       if (!haystack.includes(search)) return false;
     }
 

@@ -9,6 +9,7 @@ function expense(partial: Partial<Expense> & Pick<Expense, "id" | "amount" | "it
   return {
     userId: "user-1",
     notes: null,
+    tags: [],
     createdAt: "2026-08-01T10:00:00.000Z",
     updatedAt: "2026-08-01T10:00:00.000Z",
     ...partial,
@@ -125,6 +126,7 @@ describe("analytics & filters", () => {
     expect(summary.highestSpendingDay?.total).toBe(250);
     expect(summary.topExpenses[0]?.itemName).toBe("خضار");
     expect(summary.dailySpending).toHaveLength(2);
+    expect(summary.byTag.length).toBeGreaterThan(0);
   });
 });
 

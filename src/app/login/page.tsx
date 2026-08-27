@@ -9,7 +9,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--background)] px-4">
       <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-white p-6 shadow-[var(--shadow-sm)] sm:p-8">
-        <h1 className="mb-2 text-2xl font-semibold">مرحبًا في مصروفي</h1>
+        <h1 className="mb-2 text-2xl font-semibold">مرحبًا في مصاريفي</h1>
         <p className="mb-6 text-sm leading-7 text-[var(--muted-foreground)]">
           تسجيل الدخول عبر Supabase Auth سيُفعَّل في المرحلة التالية بعد إعداد المشروع. يمكنك
           الآن استعراض هيكل الواجهة والتنقّل.

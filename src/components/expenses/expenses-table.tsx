@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 import type { Expense } from "@/core/types";
+import { DEFAULT_TAGS } from "@/core/types";
 import { parseAmountInput, isBlankAmountInput } from "@/core/money";
+import { normalizeTags } from "@/core/export";
 import { cn } from "@/lib/utils";
 
-type FocusField = "amount" | "itemName" | "notes";
+type FocusField = "amount" | "itemName" | "tags" | "notes";
 
-const FIELD_ORDER: FocusField[] = ["amount", "itemName", "notes"];
+const FIELD_ORDER: FocusField[] = ["amount", "itemName", "tags", "notes"];
 
 interface ExpensesTableProps {
   rows: Array<Expense & { rowNumber: number }>;
@@ -17,18 +19,19 @@ interface ExpensesTableProps {
   onClearFocusNewRow?: () => void;
   onUpdate: (
     id: string,
-    patch: Partial<Pick<Expense, "amount" | "itemName" | "notes">>,
+    patch: Partial<Pick<Expense, "amount" | "itemName" | "tags" | "notes">>,
   ) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onRequestAdd: () => Promise<void>;
   onSortAmount: () => void;
   onSortName: () => void;
+  onSortTags: () => void;
   sortKey: string;
   sortDirection: string;
 }
 
 function cellSelector(rowId: string, field: FocusField): string {
-  return `[data-masroofy-cell="${rowId}:${field}"]`;
+  return `[data-masareefy-cell="${rowId}:${field}"]`;
 }
 
 function focusCell(rowId: string, field: FocusField): void {
@@ -44,24 +47,24 @@ function CellInput({
   value,
   onCommit,
   onMove,
-  type = "text",
   placeholder,
   className,
   autoFocus,
   inputMode,
   ariaLabel,
+  listId,
 }: {
   rowId: string;
   field: FocusField;
   value: string;
   onCommit: (next: string) => void;
   onMove: (direction: "next" | "prev" | "add") => void;
-  type?: string;
   placeholder?: string;
   className?: string;
   autoFocus?: boolean;
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   ariaLabel: string;
+  listId?: string;
 }) {
   const [draft, setDraft] = useState(value);
   const ref = useRef<HTMLInputElement>(null);
@@ -70,9 +73,7 @@ function CellInput({
   draftRef.current = draft;
 
   useEffect(() => {
-    if (!focusedRef.current) {
-      setDraft(value);
-    }
+    if (!focusedRef.current) setDraft(value);
   }, [value]);
 
   useEffect(() => {
@@ -92,9 +93,9 @@ function CellInput({
   return (
     <input
       ref={ref}
-      data-masroofy-cell={`${rowId}:${field}`}
+      data-masareefy-cell={`${rowId}:${field}`}
       aria-label={ariaLabel}
-      type={type}
+      list={listId}
       inputMode={inputMode}
       value={draft}
       placeholder={placeholder}
@@ -117,7 +118,6 @@ function CellInput({
           onMove(event.shiftKey ? "prev" : "next");
           return;
         }
-
         if (event.key === "Enter") {
           event.preventDefault();
           commitIfNeeded();
@@ -138,6 +138,7 @@ export function ExpensesTable({
   onRequestAdd,
   onSortAmount,
   onSortName,
+  onSortTags,
   sortKey,
   sortDirection,
 }: ExpensesTableProps) {
@@ -161,7 +162,11 @@ export function ExpensesTable({
     return () => cancelAnimationFrame(frame);
   }, [focusTarget, rows]);
 
-  const moveFrom = (rowId: string, field: FocusField, direction: "next" | "prev" | "add") => {
+  const moveFrom = (
+    rowId: string,
+    field: FocusField,
+    direction: "next" | "prev" | "add",
+  ) => {
     if (direction === "add") {
       void onRequestAdd();
       return;
@@ -177,26 +182,22 @@ export function ExpensesTable({
         focusCell(rowId, nextField);
         return;
       }
-
       if (rowIndex >= 0 && rowIndex < rowIds.length - 1) {
         const nextRowId = rowIds[rowIndex + 1]!;
         setFocusTarget({ id: nextRowId, field: "amount" });
         focusCell(nextRowId, "amount");
         return;
       }
-
       void onRequestAdd();
       return;
     }
 
-    // prev
     if (fieldIndex > 0) {
       const prevField = FIELD_ORDER[fieldIndex - 1]!;
       setFocusTarget({ id: rowId, field: prevField });
       focusCell(rowId, prevField);
       return;
     }
-
     if (rowIndex > 0) {
       const prevRowId = rowIds[rowIndex - 1]!;
       setFocusTarget({ id: prevRowId, field: "notes" });
@@ -209,56 +210,46 @@ export function ExpensesTable({
 
   return (
     <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-white shadow-[var(--shadow-sm)]">
+      <datalist id="masareefy-tags">
+        {DEFAULT_TAGS.map((tag) => (
+          <option key={tag} value={tag} />
+        ))}
+      </datalist>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] border-collapse text-sm">
+        <table className="w-full min-w-[760px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] bg-[var(--surface)] text-[var(--muted-foreground)]">
               <th className="w-14 px-3 py-2.5 text-start font-medium">#</th>
-              <th className="w-36 px-1 py-2.5 text-start font-medium">
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  className="rounded px-2 py-1 hover:bg-[var(--hover)]"
-                  onClick={onSortAmount}
-                >
+              <th className="w-32 px-1 py-2.5 text-start font-medium">
+                <button type="button" tabIndex={-1} className="rounded px-2 py-1 hover:bg-[var(--hover)]" onClick={onSortAmount}>
                   السعر{sortMark("amount")}
                 </button>
               </th>
-              <th className="min-w-[180px] px-1 py-2.5 text-start font-medium">
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  className="rounded px-2 py-1 hover:bg-[var(--hover)]"
-                  onClick={onSortName}
-                >
+              <th className="min-w-[160px] px-1 py-2.5 text-start font-medium">
+                <button type="button" tabIndex={-1} className="rounded px-2 py-1 hover:bg-[var(--hover)]" onClick={onSortName}>
                   اسم المشتريات{sortMark("itemName")}
                 </button>
               </th>
-              <th className="min-w-[200px] px-3 py-2.5 text-start font-medium">
-                ملاحظات
+              <th className="min-w-[140px] px-1 py-2.5 text-start font-medium">
+                <button type="button" tabIndex={-1} className="rounded px-2 py-1 hover:bg-[var(--hover)]" onClick={onSortTags}>
+                  التصنيف{sortMark("tags")}
+                </button>
               </th>
+              <th className="min-w-[160px] px-3 py-2.5 text-start font-medium">ملاحظات</th>
               <th className="w-12 px-2 py-2.5" aria-label="إجراءات" />
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td
-                  colSpan={5}
-                  className="px-4 py-12 text-center text-[var(--muted-foreground)]"
-                >
+                <td colSpan={6} className="px-4 py-12 text-center text-[var(--muted-foreground)]">
                   لا توجد مصروفات في هذا اليوم. اضغط «إضافة مصروف» للبدء.
                 </td>
               </tr>
             ) : (
               rows.map((row) => (
-                <tr
-                  key={row.id}
-                  className="group border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--surface)]"
-                >
-                  <td className="px-3 py-1 text-[var(--muted)] tabular-nums">
-                    {row.rowNumber}
-                  </td>
+                <tr key={row.id} className="group border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--surface)]">
+                  <td className="px-3 py-1 text-[var(--muted)] tabular-nums">{row.rowNumber}</td>
                   <td className="px-0 py-0">
                     <div className="flex items-center gap-1">
                       <CellInput
@@ -267,10 +258,7 @@ export function ExpensesTable({
                         ariaLabel={`سعر ${row.itemName || "المصروف"}`}
                         value={row.amount == null ? "" : String(row.amount)}
                         inputMode="decimal"
-                        autoFocus={
-                          focusTarget?.id === row.id &&
-                          focusTarget.field === "amount"
-                        }
+                        autoFocus={focusTarget?.id === row.id && focusTarget.field === "amount"}
                         className="text-start font-medium tabular-nums"
                         onCommit={(raw) => {
                           if (isBlankAmountInput(raw)) {
@@ -281,13 +269,9 @@ export function ExpensesTable({
                           if (parsed == null) return;
                           void onUpdate(row.id, { amount: parsed });
                         }}
-                        onMove={(direction) =>
-                          moveFrom(row.id, "amount", direction)
-                        }
+                        onMove={(direction) => moveFrom(row.id, "amount", direction)}
                       />
-                      <span className="pe-2 text-xs text-[var(--muted)]">
-                        {currencyLabel}
-                      </span>
+                      <span className="pe-2 text-xs text-[var(--muted)]">{currencyLabel}</span>
                     </div>
                   </td>
                   <td className="px-0 py-0">
@@ -297,16 +281,24 @@ export function ExpensesTable({
                       ariaLabel="اسم المشتريات"
                       value={row.itemName}
                       placeholder="اسم الحاجة"
-                      autoFocus={
-                        focusTarget?.id === row.id &&
-                        focusTarget.field === "itemName"
+                      autoFocus={focusTarget?.id === row.id && focusTarget.field === "itemName"}
+                      onCommit={(next) => void onUpdate(row.id, { itemName: next })}
+                      onMove={(direction) => moveFrom(row.id, "itemName", direction)}
+                    />
+                  </td>
+                  <td className="px-0 py-0">
+                    <CellInput
+                      rowId={row.id}
+                      field="tags"
+                      ariaLabel="التصنيف / الوسوم"
+                      value={(row.tags ?? []).join(", ")}
+                      placeholder="وسم مثل: طعام"
+                      listId="masareefy-tags"
+                      autoFocus={focusTarget?.id === row.id && focusTarget.field === "tags"}
+                      onCommit={(next) =>
+                        void onUpdate(row.id, { tags: normalizeTags(next) })
                       }
-                      onCommit={(next) => {
-                        void onUpdate(row.id, { itemName: next });
-                      }}
-                      onMove={(direction) =>
-                        moveFrom(row.id, "itemName", direction)
-                      }
+                      onMove={(direction) => moveFrom(row.id, "tags", direction)}
                     />
                   </td>
                   <td className="px-0 py-0">
@@ -316,16 +308,9 @@ export function ExpensesTable({
                       ariaLabel="ملاحظات"
                       value={row.notes ?? ""}
                       placeholder="اختياري"
-                      autoFocus={
-                        focusTarget?.id === row.id &&
-                        focusTarget.field === "notes"
-                      }
-                      onCommit={(next) => {
-                        void onUpdate(row.id, { notes: next });
-                      }}
-                      onMove={(direction) =>
-                        moveFrom(row.id, "notes", direction)
-                      }
+                      autoFocus={focusTarget?.id === row.id && focusTarget.field === "notes"}
+                      onCommit={(next) => void onUpdate(row.id, { notes: next })}
+                      onMove={(direction) => moveFrom(row.id, "notes", direction)}
                     />
                   </td>
                   <td className="px-2 py-1">

@@ -18,7 +18,7 @@ export function downloadExpensesPdf(
   const total = sumAmounts(expenses.map((e) => e.amount));
 
   doc.setFontSize(16);
-  doc.text("Masroofy - Expenses Report", 40, 40);
+  doc.text("Masareefy - Expenses Report", 40, 40);
   doc.setFontSize(10);
   doc.text(`Generated: ${new Date().toLocaleString("en-GB")}`, 40, 58);
   doc.text(`Count: ${expenses.length}`, 40, 74);
@@ -26,11 +26,12 @@ export function downloadExpensesPdf(
 
   autoTable(doc, {
     startY: 110,
-    head: [["Date", "Amount", "Item", "Notes"]],
+    head: [["Date", "Amount", "Item", "Tags", "Notes"]],
     body: rows.map((row) => [
       row.spentOn,
       row.amount || "-",
       row.itemName || "-",
+      row.tags || "-",
       row.notes || "-",
     ]),
     styles: { fontSize: 9, cellPadding: 4 },
@@ -38,5 +39,5 @@ export function downloadExpensesPdf(
     alternateRowStyles: { fillColor: [247, 247, 245] },
   });
 
-  doc.save(exportFilename("masroofy-expenses", "pdf"));
+  doc.save(exportFilename("Masareefy-expenses", "pdf"));
 }

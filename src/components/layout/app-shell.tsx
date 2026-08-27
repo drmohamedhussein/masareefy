@@ -29,7 +29,7 @@ export function Sidebar() {
         </span>
         <div>
           <p className="text-base font-semibold tracking-tight text-[var(--foreground)]">
-            مصروفي
+            مصاريفي
           </p>
           <p className="text-xs text-[var(--muted)]">تتبع مصاريفك بسهولة</p>
         </div>
