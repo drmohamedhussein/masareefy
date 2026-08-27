@@ -1,9 +1,22 @@
 @echo off
-REM ضع اختصارًا لهذا الملف في مجلد Startup لتشغيل مصروفي مع ويندوز
-cd /d "%~dp0.."
-if not exist ".next" (
+REM يعمل تلقائيًا مع بدء ويندوز — لا تغلق النافذة السوداء إن ظهرت
+set ROOT=C:\Users\drmoh\Projects\masroofy
+cd /d "%ROOT%"
+
+where node >nul 2>&1
+if errorlevel 1 (
+  echo Node.js غير موجود في PATH
+  exit /b 1
+)
+
+if not exist "%ROOT%\node_modules" (
+  call npm install
+)
+
+if not exist "%ROOT%\.next\BUILD_ID" (
   call npm run build
 )
-start "مصروفي" cmd /c "npm run start"
-timeout /t 3 >nul
-start http://localhost:3737/expenses
+
+start "مصروفي" /MIN cmd /c "cd /d \"%ROOT%\" && npm run start"
+timeout /t 5 /nobreak >nul
+start "" "http://localhost:3737/expenses"
