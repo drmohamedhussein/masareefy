@@ -7,6 +7,7 @@ import { DEFAULT_TAGS, type CurrencyCode } from "@/core/types";
 import { useExpenses } from "@/components/expenses/expenses-provider";
 import { ExpensesTable } from "@/components/expenses/expenses-table";
 import { ReceiptScanButton } from "@/components/expenses/receipt-scan-button";
+import { useClientMounted } from "@/lib/hooks/use-client-mounted";
 import { useCallback, useMemo, useState } from "react";
 
 export function ExpensesView({ compact = false }: { compact?: boolean }) {
@@ -16,12 +17,14 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
     profile,
     loading,
     selectedDate,
+    showAllDates,
     search,
     tagFilter,
     sortKey,
     sortDirection,
     pendingUndo,
     setSelectedDate,
+    setShowAllDates,
     setSearch,
     setTagFilter,
     setSort,
@@ -31,6 +34,8 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
     undoDelete,
     dismissUndo,
   } = useExpenses();
+
+  const mounted = useClientMounted();
 
   const [focusNewRowId, setFocusNewRowId] = useState<string | null>(null);
   const currency = (profile?.currency ?? "EGP") as CurrencyCode;
@@ -58,9 +63,12 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
     setFocusNewRowId(created.id);
   }, [addExpense, selectedDate]);
 
-  if (loading) {
+  if (!mounted || loading) {
     return (
-      <div className="rounded-xl border border-[var(--border)] bg-white p-8 text-sm text-[var(--muted-foreground)]">
+      <div
+        className="rounded-xl border border-[var(--border)] bg-white p-8 text-sm text-[var(--muted-foreground)]"
+        suppressHydrationWarning
+      >
         جاري تحميل مصاريفك…
       </div>
     );
@@ -96,12 +104,22 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <label className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm shadow-[var(--shadow-sm)]">
+            <input
+              type="checkbox"
+              checked={showAllDates}
+              onChange={(event) => setShowAllDates(event.target.checked)}
+            />
+            <span>كل الأيام</span>
+          </label>
+
+          <label className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm shadow-[var(--shadow-sm)]">
             <span className="text-[var(--muted)]">التاريخ</span>
             <input
               type="date"
               value={selectedDate}
+              disabled={showAllDates}
               onChange={(event) => setSelectedDate(event.target.value)}
-              className="bg-transparent outline-none"
+              className="bg-transparent outline-none disabled:opacity-50"
             />
           </label>
 
@@ -167,6 +185,11 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
         <p className="text-[var(--muted-foreground)]">
           عدد المشتريات:{" "}
           <span className="font-semibold text-[var(--foreground)]">{totals.count}</span>
+          {!showAllDates && expenses.length > visibleExpenses.length && (
+            <span className="ms-2 text-xs">
+              (المجموع الكلي: {expenses.length})
+            </span>
+          )}
         </p>
         <p className="text-[var(--muted-foreground)]">
           الإجمالي:{" "}

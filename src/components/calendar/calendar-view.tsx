@@ -8,9 +8,10 @@ import {
   buildMonthGrid,
   monthLabelAr,
 } from "@/core/calendar";
-import { formatMoney, todayISO } from "@/core";
+import { formatMoney, todayISO, parseISODate } from "@/core";
 import type { CurrencyCode } from "@/core/types";
 import { useExpenses } from "@/components/expenses/expenses-provider";
+import { useClientMounted } from "@/lib/hooks/use-client-mounted";
 import { cn } from "@/lib/utils";
 
 const WEEKDAYS = ["أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
@@ -27,7 +28,7 @@ export function CalendarView() {
   } = useExpenses();
 
   const initial = selectedDate || todayISO();
-  const initialDate = new Date(initial);
+  const initialDate = parseISODate(initial);
   const [cursor, setCursor] = useState({
     year: initialDate.getFullYear(),
     monthIndex: initialDate.getMonth(),
@@ -69,9 +70,14 @@ export function CalendarView() {
     router.push("/expenses");
   };
 
-  if (loading) {
+  const mounted = useClientMounted();
+
+  if (!mounted || loading) {
     return (
-      <div className="rounded-xl border border-[var(--border)] bg-white p-8 text-sm text-[var(--muted-foreground)]">
+      <div
+        className="rounded-xl border border-[var(--border)] bg-white p-8 text-sm text-[var(--muted-foreground)]"
+        suppressHydrationWarning
+      >
         جاري تحميل التقويم…
       </div>
     );

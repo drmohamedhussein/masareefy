@@ -48,7 +48,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="ar" dir="rtl" className={`${ibmPlexArabic.variable} h-full antialiased`}>
+    <html lang="ar" dir="rtl" className={`${ibmPlexArabic.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full font-sans" suppressHydrationWarning>
         <SerwistProvider swUrl="/serwist/sw.js">
           <InstallAppBanner />

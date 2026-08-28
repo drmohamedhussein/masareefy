@@ -7,4 +7,5 @@ export * from "./calendar";
 export * from "./export";
 export * from "./repository";
 export * from "./tags";
+export * from "./spent-on";
 export * from "./recurring";

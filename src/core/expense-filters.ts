@@ -1,4 +1,5 @@
 import type { Expense, ExpenseQuery, ExpenseSortKey, SortDirection } from "./types";
+import { normalizeSpentOn } from "./spent-on";
 
 function compareValues(
   a: string | number,
@@ -36,9 +37,10 @@ export function filterExpenses(
   const sortDirection = query.sortDirection ?? "desc";
 
   const filtered = expenses.filter((expense) => {
-    if (query.spentOn && expense.spentOn !== query.spentOn) return false;
-    if (query.from && expense.spentOn < query.from) return false;
-    if (query.to && expense.spentOn > query.to) return false;
+    const spentOn = normalizeSpentOn(expense.spentOn) ?? expense.spentOn;
+    if (query.spentOn && spentOn !== query.spentOn) return false;
+    if (query.from && spentOn < query.from) return false;
+    if (query.to && spentOn > query.to) return false;
     if (tag && !(expense.tags ?? []).includes(tag)) return false;
 
     if (search) {

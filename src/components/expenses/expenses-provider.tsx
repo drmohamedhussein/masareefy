@@ -21,6 +21,7 @@ import type {
 } from "@/core/types";
 import { filterExpenses } from "@/core/expense-filters";
 import { todayISO } from "@/core/date-range";
+import { normalizeSpentOn } from "@/core/spent-on";
 import { getExpenseRepository } from "@/lib/storage/get-repository";
 import { syncExpensesEverywhere } from "@/lib/sync/everywhere";
 import { normalizeTags } from "@/core/export";
@@ -43,7 +44,9 @@ interface ExpensesContextValue {
   sortKey: ExpenseSortKey;
   sortDirection: SortDirection;
   pendingUndo: PendingUndo | null;
+  showAllDates: boolean;
   setSelectedDate: (date: string) => void;
+  setShowAllDates: (value: boolean) => void;
   setSearch: (value: string) => void;
   setTagFilter: (value: string) => void;
   setSort: (key: ExpenseSortKey) => void;
@@ -63,7 +66,8 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(todayISO());
+  const [selectedDate, setSelectedDateRaw] = useState(todayISO());
+  const [showAllDates, setShowAllDates] = useState(false);
   const [search, setSearch] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [sortKey, setSortKey] = useState<ExpenseSortKey>("spentOn");
@@ -117,15 +121,20 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const setSelectedDate = useCallback((date: string) => {
+    const normalized = normalizeSpentOn(date);
+    if (normalized) setSelectedDateRaw(normalized);
+  }, []);
+
   const query: ExpenseQuery = useMemo(
     () => ({
-      spentOn: selectedDate,
+      spentOn: showAllDates ? undefined : selectedDate,
       search,
       tag: tagFilter || undefined,
       sortKey,
       sortDirection,
     }),
-    [selectedDate, search, tagFilter, sortKey, sortDirection],
+    [selectedDate, showAllDates, search, tagFilter, sortKey, sortDirection],
   );
 
   const visibleExpenses = useMemo(
@@ -278,7 +287,9 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
       sortKey,
       sortDirection,
       pendingUndo,
+      showAllDates,
       setSelectedDate,
+      setShowAllDates,
       setSearch,
       setTagFilter,
       setSort,
@@ -301,6 +312,7 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
       sortKey,
       sortDirection,
       pendingUndo,
+      showAllDates,
       setSort,
       refresh,
       addExpense,

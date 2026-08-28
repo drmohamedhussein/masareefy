@@ -3,6 +3,7 @@ import { resolveDateRange, isDateInRange, daysInRange } from "../date-range";
 import { summarizeAnalytics, totalForExpenses } from "../analytics";
 import { filterExpenses, withSequentialNumbers } from "../expense-filters";
 import { formatMoney, parseAmountInput, sumAmounts } from "../money";
+import { normalizeSpentOn } from "../spent-on";
 import type { Expense } from "../types";
 
 function expense(partial: Partial<Expense> & Pick<Expense, "id" | "amount" | "itemName" | "spentOn">): Expense {
@@ -143,6 +144,18 @@ describe("calendar", () => {
     expect(day?.count).toBe(2);
     expect(day?.total).toBe(100);
     expect(day?.isToday).toBe(true);
+  });
+});
+
+describe("spent-on", () => {
+  it("normalizes ISO date and datetime strings", () => {
+    expect(normalizeSpentOn("2026-08-27")).toBe("2026-08-27");
+    expect(normalizeSpentOn("2026-08-27T22:00:00.000Z")).toBe("2026-08-27");
+  });
+
+  it("normalizes slash dates", () => {
+    expect(normalizeSpentOn("08/27/2026")).toBe("2026-08-27");
+    expect(normalizeSpentOn("27/08/2026")).toBe("2026-08-27");
   });
 });
 

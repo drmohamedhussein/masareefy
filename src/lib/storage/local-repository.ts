@@ -1,6 +1,7 @@
 import { filterExpenses } from "@/core/expense-filters";
 import { todayISO } from "@/core/date-range";
 import { normalizeTags } from "@/core/export";
+import { normalizeSpentOn, resolveSpentOn } from "@/core/spent-on";
 import type {
   CurrencyCode,
   Expense,
@@ -12,8 +13,15 @@ import type {
 import type { ExpenseRepository } from "@/core/repository";
 import { mirrorLocalStorageToPreferences } from "@/lib/storage/preferences-bridge";
 
-const STORAGE_KEY = "masareefy.v1";
-const LEGACY_KEY = "Masareefy.v1";
+export const STORAGE_KEY = "masareefy.v1";
+
+/** Older installs used different keys — merge them once into STORAGE_KEY. */
+const LEGACY_STORAGE_KEYS = [
+  "Masareefy.v1",
+  "masroofy.v1",
+  "Masroofy.v1",
+] as const;
+
 const LOCAL_USER_ID = "local-user";
 
 interface LocalStore {
@@ -39,6 +47,12 @@ function defaultStore(): LocalStore {
 }
 
 function migrateExpense(raw: Partial<Expense> & { id: string }): Expense {
+  const createdAt = raw.createdAt ?? new Date().toISOString();
+  const spentOn =
+    normalizeSpentOn(raw.spentOn) ??
+    normalizeSpentOn(createdAt.slice(0, 10)) ??
+    todayISO();
+
   return {
     id: raw.id,
     userId: raw.userId ?? LOCAL_USER_ID,
@@ -46,37 +60,109 @@ function migrateExpense(raw: Partial<Expense> & { id: string }): Expense {
     itemName: raw.itemName ?? "",
     tags: normalizeTags(raw.tags),
     notes: raw.notes ?? null,
-    spentOn: raw.spentOn ?? todayISO(),
-    createdAt: raw.createdAt ?? new Date().toISOString(),
-    updatedAt: raw.updatedAt ?? new Date().toISOString(),
+    spentOn,
+    createdAt,
+    updatedAt: raw.updatedAt ?? createdAt,
   };
+}
+
+function parseStorePayload(
+  parsed: Partial<LocalStore> & {
+    expenses?: Array<Partial<Expense> & { id: string }>;
+  },
+): LocalStore | null {
+  if (!parsed?.profile || !Array.isArray(parsed.expenses)) {
+    return null;
+  }
+
+  return {
+    profile: {
+      ...defaultStore().profile,
+      ...parsed.profile,
+      monthlyBudget: parsed.profile.monthlyBudget ?? null,
+    },
+    expenses: parsed.expenses.map(migrateExpense),
+    recurring: Array.isArray(parsed.recurring) ? parsed.recurring : [],
+  };
+}
+
+function readRawFromKey(key: string): LocalStore | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    return parseStorePayload(JSON.parse(raw) as Partial<LocalStore>);
+  } catch {
+    return null;
+  }
+}
+
+function mergeStores(stores: LocalStore[]): LocalStore {
+  const base = defaultStore();
+  if (stores.length === 0) return base;
+
+  const byId = new Map<string, Expense>();
+  for (const store of stores) {
+    for (const expense of store.expenses) {
+      const existing = byId.get(expense.id);
+      if (
+        !existing ||
+        expense.updatedAt.localeCompare(existing.updatedAt) > 0
+      ) {
+        byId.set(expense.id, expense);
+      }
+    }
+  }
+
+  const profile =
+    stores.find((store) => store.profile.displayName)?.profile ??
+    stores[0]!.profile;
+
+  const recurring =
+    stores.find((store) => store.recurring.length > 0)?.recurring ?? [];
+
+  return {
+    profile: { ...base.profile, ...profile },
+    expenses: [...byId.values()].sort((a, b) =>
+      b.createdAt.localeCompare(a.createdAt),
+    ),
+    recurring,
+  };
+}
+
+function consolidateLegacyStorage(): LocalStore {
+  const candidates: LocalStore[] = [];
+  const primary = readRawFromKey(STORAGE_KEY);
+  if (primary) candidates.push(primary);
+
+  for (const key of LEGACY_STORAGE_KEYS) {
+    const legacy = readRawFromKey(key);
+    if (legacy) candidates.push(legacy);
+  }
+
+  const merged = mergeStores(candidates);
+  writeStore(merged);
+
+  for (const key of LEGACY_STORAGE_KEYS) {
+    window.localStorage.removeItem(key);
+  }
+
+  return merged;
 }
 
 function readStore(): LocalStore {
   if (typeof window === "undefined") return defaultStore();
 
   try {
-    const raw =
-      window.localStorage.getItem(STORAGE_KEY) ??
-      window.localStorage.getItem(LEGACY_KEY);
-    if (!raw) return defaultStore();
-    const parsed = JSON.parse(raw) as Partial<LocalStore> & {
-      expenses?: Array<Partial<Expense> & { id: string }>;
-    };
-    if (!parsed?.profile || !Array.isArray(parsed.expenses)) {
-      return defaultStore();
+    const hasLegacy = LEGACY_STORAGE_KEYS.some(
+      (key) => window.localStorage.getItem(key) != null,
+    );
+    if (hasLegacy) {
+      return consolidateLegacyStorage();
     }
-    const store: LocalStore = {
-      profile: {
-        ...defaultStore().profile,
-        ...parsed.profile,
-        monthlyBudget: parsed.profile.monthlyBudget ?? null,
-      },
-      expenses: parsed.expenses.map(migrateExpense),
-      recurring: Array.isArray(parsed.recurring) ? parsed.recurring : [],
-    };
-    writeStore(store);
-    return store;
+
+    const primary = readRawFromKey(STORAGE_KEY);
+    return primary ?? defaultStore();
   } catch {
     return defaultStore();
   }
@@ -116,7 +202,7 @@ export class LocalExpenseRepository implements ExpenseRepository {
       itemName: draft.itemName ?? "",
       tags: normalizeTags(draft.tags),
       notes: draft.notes?.trim() ? draft.notes.trim() : null,
-      spentOn: draft.spentOn || todayISO(),
+      spentOn: resolveSpentOn(draft.spentOn),
       createdAt: now,
       updatedAt: now,
     };
@@ -156,7 +242,10 @@ export class LocalExpenseRepository implements ExpenseRepository {
             ? patch.notes.trim()
             : null
           : current.notes,
-      spentOn: patch.spentOn ?? current.spentOn,
+      spentOn:
+        patch.spentOn !== undefined
+          ? resolveSpentOn(patch.spentOn, current.spentOn)
+          : current.spentOn,
       updatedAt: new Date().toISOString(),
     };
 

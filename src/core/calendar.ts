@@ -1,4 +1,5 @@
 import { parseISODate, toISODate } from "./date-range";
+import { normalizeSpentOn } from "./spent-on";
 import { roundMoney } from "./money";
 import type { DailyBucket, Expense } from "./types";
 
@@ -22,8 +23,9 @@ export function buildMonthGrid(
   const totals = new Map<string, DailyBucket>();
 
   for (const expense of expenses) {
-    const bucket = totals.get(expense.spentOn) ?? {
-      date: expense.spentOn,
+    const dateKey = normalizeSpentOn(expense.spentOn) ?? expense.spentOn;
+    const bucket = totals.get(dateKey) ?? {
+      date: dateKey,
       total: 0,
       count: 0,
     };
@@ -31,7 +33,7 @@ export function buildMonthGrid(
       bucket.total = roundMoney(bucket.total + expense.amount);
     }
     bucket.count += 1;
-    totals.set(expense.spentOn, bucket);
+    totals.set(dateKey, bucket);
   }
 
   const cells: CalendarDayCell[] = [];
