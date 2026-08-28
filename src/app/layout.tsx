@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans_Arabic } from "next/font/google";
 import { SerwistProvider } from "@/components/pwa/serwist-provider";
 import { InstallAppBanner } from "@/components/pwa/install-app-banner";
+import { SITE } from "@/lib/seo/site";
 import "./globals.css";
 
 const ibmPlexArabic = IBM_Plex_Sans_Arabic({
@@ -10,32 +11,56 @@ const ibmPlexArabic = IBM_Plex_Sans_Arabic({
   weight: ["400", "500", "600", "700"],
 });
 
-const APP_NAME = "مصاريفي";
-const APP_DESCRIPTION =
-  "تطبيق عربي لتتبع المصروفات الشخصية بواجهة شبيهة بـ Notion — قابل للتثبيت على الجهاز";
-
 export const metadata: Metadata = {
-  applicationName: APP_NAME,
+  metadataBase: new URL(SITE.url),
+  applicationName: SITE.name,
   title: {
-    default: APP_NAME,
-    template: `%s | ${APP_NAME}`,
+    default: `${SITE.name} — ${SITE.tagline}`,
+    template: `%s | ${SITE.name}`,
   },
-  description: APP_DESCRIPTION,
+  description: SITE.description,
+  keywords: [...SITE.keywords],
+  authors: [{ name: SITE.name, url: SITE.url }],
+  creator: SITE.name,
+  publisher: SITE.name,
   manifest: "/manifest.webmanifest",
+  alternates: {
+    canonical: SITE.url,
+    languages: { "ar-EG": SITE.url },
+  },
+  openGraph: {
+    type: "website",
+    locale: SITE.locale,
+    url: SITE.url,
+    siteName: SITE.name,
+    title: `${SITE.name} — تطبيق عربي مجاني لتتبع المصروفات`,
+    description: SITE.description,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE.name,
+    description: SITE.description,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: APP_NAME,
+    title: SITE.name,
   },
-  formatDetection: {
-    telephone: false,
-  },
+  formatDetection: { telephone: false },
   icons: {
     icon: [
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
     apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  other: {
+    "ai-content-declaration": "human-authored",
   },
 };
 

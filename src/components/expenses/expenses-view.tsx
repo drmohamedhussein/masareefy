@@ -225,7 +225,7 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
       <button
         type="button"
         onClick={() => void handleAdd()}
-        className="fixed bottom-20 end-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-lg md:hidden"
+        className="fixed bottom-20 end-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-lg md:bottom-6"
         aria-label="إضافة مصروف"
       >
         <Plus className="h-6 w-6" />

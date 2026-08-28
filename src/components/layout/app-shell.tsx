@@ -31,6 +31,7 @@ export function Sidebar() {
   return (
     <aside className="hidden md:flex md:w-60 md:flex-col md:border-l md:border-[var(--border)] md:bg-[var(--sidebar)]">
       <div className="flex items-center gap-2 px-5 py-5">
+        <Link href="/" className="flex items-center gap-2 hover:opacity-90">
         <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--accent)] text-white">
           <Wallet className="h-5 w-5" aria-hidden />
         </span>
@@ -40,6 +41,7 @@ export function Sidebar() {
           </p>
           <p className="text-xs text-[var(--muted)]">تتبع مصاريفك بسهولة</p>
         </div>
+        </Link>
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 px-3 pb-6" aria-label="القائمة الرئيسية">

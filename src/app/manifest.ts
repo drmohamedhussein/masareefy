@@ -5,7 +5,8 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/",
     name: "مصاريفي",
     short_name: "مصاريفي",
-    description: "تتبع مصاريفك الشخصية بسهولة — جدول وتقويم وإحصاءات",
+    description:
+      "تطبيق عربي مجاني 100% لتتبع المصروفات — تخزين محلي على جهازك. PWA قابل للتثبيت.",
     start_url: "/expenses",
     scope: "/",
     display: "standalone",
