@@ -34,6 +34,26 @@ npm run dev
 7. غلاف أندرويد Capacitor أوفلاين: مجلد `android/` + `docs/android.md`
 8. تصوير فاتورة + OCR من زر «فاتورة»
 
+## النشر اللايف (موقع دائم)
+
+الكود مرفوع بالكامل على GitHub. لربط موقع لايف:
+
+### Netlify (موصى به — مجاني)
+
+1. افتح: https://app.netlify.com/start/deploy?repository=https://github.com/drmohamedhussein/masareefy
+2. سجّل دخول GitHub واختر الريبو `masareefy`
+3. اضغط **Deploy** (يقرأ `netlify.toml` تلقائيًا)
+4. أضف `NEXT_PUBLIC_GOOGLE_CLIENT_ID` في Environment variables
+5. أضف رابط موقعك في Google OAuth origins
+
+### Cloudflare Workers (بديل)
+
+```bash
+npm run deploy
+```
+
+يحتاج خطة مدفوعة (حجم التطبيق > 3MB على المجاني).
+
 ## ووردبريس
 
 انسخ `wordpress/masareefy` إلى `wp-content/plugins/` وفعّل الإضافة. كل مستخدم يرى مصاريفه فقط (REST + جدول لكل user_id).
