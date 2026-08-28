@@ -48,9 +48,16 @@ export function GoogleSheetsPanel() {
       <section className="rounded-xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-sm)]">
         <h2 className="mb-1 font-medium">الربط المباشر مع Google Sheets</h2>
         <p className="mb-4 text-sm leading-7 text-[var(--muted-foreground)]">
-          بعد الربط، كل إضافة أو تعديل أو حذف لمصروف يُحدَّث تلقائيًا في جدول Google
-          المرتبط بحساب Gmail الخاص بك.
+          كل مستخدم يربط <strong className="text-[var(--foreground)]">حساب Google الخاص به</strong> فقط.
+          الجدول يُنشأ في Google Drive الخاص به — أنت كصاحب التطبيق لا تخزّن ولا تتحكم
+          في بيانات المستخدمين. المزامنة تلقائية بعد كل تعديل.
         </p>
+
+        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+          <strong>خصوصية البيانات:</strong> المصروفات تُحفظ على جهاز المستخدم محليًا،
+          ونسخة Google Sheets في حساب Gmail الخاص به. لا تمر عبر سيرفرك إلا إذا أضفت
+          تسجيل سحابي لاحقًا (Supabase).
+        </div>
 
         {!configured && (
           <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">

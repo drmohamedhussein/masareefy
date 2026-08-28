@@ -1,5 +1,6 @@
 @echo off
-REM يعمل تلقائيًا مع بدء ويندوز — لا تغلق النافذة السوداء إن ظهرت
+REM تشغيل يدوي فقط — لا يُضاف تلقائيًا لبدء ويندوز.
+REM للاستخدام: انقر اختصار «مصاريفي» على سطح المكتب أو شغّل scripts\open-masareefy.cmd
 set ROOT=C:\Users\drmoh\Projects\masareefy
 cd /d "%ROOT%"
 
