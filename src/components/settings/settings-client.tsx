@@ -8,7 +8,8 @@ import { GoogleSheetsPanel } from "@/components/settings/google-sheets-panel";
 import { NotionPanel } from "@/components/settings/notion-panel";
 import { RecurringPanel } from "@/components/settings/recurring-panel";
 import { useExpenses } from "@/components/expenses/expenses-provider";
-import { useAuth } from "@/components/auth/auth-provider";
+import { LanguagePanel } from "@/components/settings/language-panel";
+import { useI18n } from "@/components/providers/locale-provider";
 import { getExpenseRepository } from "@/lib/storage/get-repository";
 import { cn } from "@/lib/utils";
 
@@ -19,18 +20,10 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-const TABS: Array<{ id: SettingsTab; label: string; icon: React.ReactNode }> = [
-  { id: "general", label: "عام", icon: <Download className="h-4 w-4" /> },
-  { id: "recurring", label: "متكررة", icon: <RefreshCw className="h-4 w-4" /> },
-  { id: "export", label: "تصدير", icon: <FileUp className="h-4 w-4" /> },
-  { id: "google", label: "Google", icon: <Sheet className="h-4 w-4" /> },
-  { id: "notion", label: "Notion", icon: <StickyNote className="h-4 w-4" /> },
-];
-
 export function SettingsClient() {
   const { profile, refresh } = useExpenses();
-  const { isAdmin } = useAuth();
-  const [tab, setTab] = useState<SettingsTab>("google");
+  const { t } = useI18n();
+  const [tab, setTab] = useState<SettingsTab>("general");
   const [canInstall, setCanInstall] = useState(false);
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
@@ -59,17 +52,22 @@ export function SettingsClient() {
     return () => window.removeEventListener("beforeinstallprompt", onBeforeInstall);
   }, []);
 
+  const tabs: Array<{ id: SettingsTab; label: string; icon: React.ReactNode }> = [
+    { id: "general", label: t.settings.tabs.general, icon: <Download className="h-4 w-4" /> },
+    { id: "recurring", label: t.settings.tabs.recurring, icon: <RefreshCw className="h-4 w-4" /> },
+    { id: "export", label: t.settings.tabs.export, icon: <FileUp className="h-4 w-4" /> },
+    { id: "google", label: t.settings.tabs.google, icon: <Sheet className="h-4 w-4" /> },
+    { id: "notion", label: t.settings.tabs.notion, icon: <StickyNote className="h-4 w-4" /> },
+  ];
+
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight">الإعدادات</h1>
-        <p className="text-sm text-[var(--muted-foreground)]">
-          تصدير · Google Sheets تلقائي · Notion · ميزانية
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t.nav.settings}</h1>
       </header>
 
       <div className="flex flex-wrap gap-2">
-        {TABS.map((item) => (
+        {tabs.map((item) => (
           <button
             key={item.id}
             type="button"
@@ -89,13 +87,14 @@ export function SettingsClient() {
 
       {tab === "general" && (
         <div className="space-y-4">
+          <LanguagePanel />
           <section className="rounded-xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-sm)]">
-            <h2 className="mb-3 font-medium">تثبيت مصاريفي كتطبيق</h2>
+            <h2 className="mb-3 font-medium">{t.settings.installTitle}</h2>
             {installed ? (
-              <p className="text-sm text-[var(--success)]">التطبيق مثبت على هذا الجهاز.</p>
+              <p className="text-sm text-[var(--success)]">{t.settings.installInstalled}</p>
             ) : (
               <div className="space-y-3 text-sm text-[var(--muted-foreground)]">
-                <p>ثبّته من المتصفح ليظهر كأيقونة مستقلة.</p>
+                <p>{t.settings.installHint}</p>
                 {canInstall && deferred && (
                   <button
                     type="button"
@@ -106,7 +105,7 @@ export function SettingsClient() {
                       setCanInstall(false);
                     }}
                   >
-                    تثبيت الآن
+                    {t.settings.installNow}
                   </button>
                 )}
               </div>
@@ -114,7 +113,7 @@ export function SettingsClient() {
           </section>
 
           <section className="rounded-xl border border-[var(--border)] bg-white p-5 text-sm shadow-[var(--shadow-sm)]">
-            <p className="mb-2 font-medium">الميزانية الشهرية (ج.م)</p>
+            <p className="mb-2 font-medium">{t.settings.budgetTitle}</p>
             <div className="flex flex-wrap gap-2">
               <input
                 type="number"
@@ -122,7 +121,7 @@ export function SettingsClient() {
                 value={budgetInput}
                 onChange={(e) => setBudgetInput(e.target.value)}
                 className="rounded-lg border border-[var(--border)] px-3 py-2"
-                placeholder="مثال: 10000"
+                placeholder={t.settings.budgetPlaceholder}
               />
               <button
                 type="button"
@@ -143,34 +142,19 @@ export function SettingsClient() {
                   })();
                 }}
               >
-                حفظ
+                {t.common.save}
               </button>
             </div>
           </section>
 
           <div className="rounded-xl border border-[var(--border)] bg-white p-5 text-sm shadow-[var(--shadow-sm)]">
-            <p className="mb-1 font-medium">العملة</p>
-            <p className="text-[var(--muted-foreground)]">جنيه مصري (ج.م)</p>
+            <p className="mb-1 font-medium">{t.settings.currencyTitle}</p>
+            <p className="text-[var(--muted-foreground)]">{t.settings.currencyValue}</p>
           </div>
 
           <div className="rounded-xl border border-[var(--border)] bg-white p-5 text-sm shadow-[var(--shadow-sm)]">
-            <p className="mb-1 font-medium">أين تُحفظ بياناتك؟</p>
+            <p className="mb-1 font-medium">{t.settings.storageTitle}</p>
             <p className="text-[var(--muted-foreground)]">{storageMode}</p>
-          </div>
-
-          <div className="rounded-xl border border-[var(--border)] bg-white p-5 text-sm shadow-[var(--shadow-sm)]">
-            <p className="mb-1 font-medium">لوحة الأدمن</p>
-            <p className="mb-3 text-[var(--muted-foreground)]">
-              {isAdmin
-                ? "أنت مسجّل كأدمن — إحصاءات وصلاحيات أعلى."
-                : "دخول برمز PIN لصلاحيات الإدارة."}
-            </p>
-            <a
-              href="/admin"
-              className="inline-flex rounded-lg border border-[var(--border)] px-4 py-2 text-sm hover:bg-[var(--hover)]"
-            >
-              {isAdmin ? "فتح لوحة الأدمن" : "دخول الأدمن"}
-            </a>
           </div>
         </div>
       )}

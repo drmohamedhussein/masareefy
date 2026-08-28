@@ -188,7 +188,7 @@ async function requestToken(prompt: "" | "consent"): Promise<{
 }> {
   const clientId = getGoogleClientId();
   if (!clientId) {
-    throw new Error("لم يتم ضبط NEXT_PUBLIC_GOOGLE_CLIENT_ID بعد");
+    throw new Error("Google sign-in is not available on this site yet.");
   }
 
   await loadGisScript();

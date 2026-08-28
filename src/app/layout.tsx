@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans_Arabic } from "next/font/google";
 import { SerwistProvider } from "@/components/pwa/serwist-provider";
 import { InstallAppBanner } from "@/components/pwa/install-app-banner";
+import { LocaleProvider } from "@/components/providers/locale-provider";
 import { SITE } from "@/lib/seo/site";
 import "./globals.css";
 
@@ -73,12 +74,14 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="ar" dir="rtl" className={`${ibmPlexArabic.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="en" dir="ltr" className={`${ibmPlexArabic.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full font-sans" suppressHydrationWarning>
-        <SerwistProvider swUrl="/serwist/sw.js">
-          <InstallAppBanner />
-          {children}
-        </SerwistProvider>
+        <LocaleProvider>
+          <SerwistProvider swUrl="/serwist/sw.js">
+            <InstallAppBanner />
+            {children}
+          </SerwistProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

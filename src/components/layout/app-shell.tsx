@@ -13,39 +13,41 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useI18n } from "@/components/providers/locale-provider";
 import { useClientMounted } from "@/lib/hooks/use-client-mounted";
 
-const NAV = [
-  { href: "/expenses", label: "المصروفات", icon: Receipt },
-  { href: "/subscriptions", label: "الاشتراكات", icon: RefreshCw },
-  { href: "/calendar", label: "التقويم", icon: CalendarDays },
-  { href: "/analytics", label: "الإحصاءات", icon: BarChart3 },
-  { href: "/settings", label: "الإعدادات", icon: Settings },
+const NAV_HREFS = [
+  { href: "/expenses", key: "expenses" as const, icon: Receipt },
+  { href: "/subscriptions", key: "subscriptions" as const, icon: RefreshCw },
+  { href: "/calendar", key: "calendar" as const, icon: CalendarDays },
+  { href: "/analytics", key: "analytics" as const, icon: BarChart3 },
+  { href: "/settings", key: "settings" as const, icon: Settings },
 ] as const;
 
 export function Sidebar() {
   const pathname = usePathname();
   const mounted = useClientMounted();
   const { isAdmin } = useAuth();
+  const { t } = useI18n();
 
   return (
     <aside className="hidden md:flex md:w-60 md:flex-col md:border-l md:border-[var(--border)] md:bg-[var(--sidebar)]">
       <div className="flex items-center gap-2 px-5 py-5">
         <Link href="/" className="flex items-center gap-2 hover:opacity-90">
-        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--accent)] text-white">
-          <Wallet className="h-5 w-5" aria-hidden />
-        </span>
-        <div>
-          <p className="text-base font-semibold tracking-tight text-[var(--foreground)]">
-            مصاريفي
-          </p>
-          <p className="text-xs text-[var(--muted)]">تتبع مصاريفك بسهولة</p>
-        </div>
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--accent)] text-white">
+            <Wallet className="h-5 w-5" aria-hidden />
+          </span>
+          <div>
+            <p className="text-base font-semibold tracking-tight text-[var(--foreground)]">
+              {t.brand.name}
+            </p>
+            <p className="text-xs text-[var(--muted)]">{t.brand.tagline}</p>
+          </div>
         </Link>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1 px-3 pb-6" aria-label="القائمة الرئيسية">
-        {NAV.map(({ href, label, icon: Icon }) => {
+      <nav className="flex flex-1 flex-col gap-1 px-3 pb-6" aria-label={t.nav.settings}>
+        {NAV_HREFS.map(({ href, key, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link
@@ -60,7 +62,7 @@ export function Sidebar() {
               )}
             >
               <Icon className="h-4 w-4 shrink-0" aria-hidden />
-              {label}
+              {t.nav[key]}
             </Link>
           );
         })}
@@ -80,7 +82,7 @@ export function Sidebar() {
             )}
           >
             <Shield className="h-4 w-4 shrink-0" aria-hidden />
-            لوحة الأدمن
+            {t.nav.admin}
           </Link>
         )}
       </nav>
@@ -90,14 +92,15 @@ export function Sidebar() {
 
 export function MobileNav() {
   const pathname = usePathname();
+  const { t } = useI18n();
 
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-white/95 backdrop-blur md:hidden"
-      aria-label="تنقل الجوال"
+      aria-label={t.nav.settings}
     >
       <ul className="grid grid-cols-5">
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {NAV_HREFS.map(({ href, key, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
           return (
             <li key={href}>
@@ -112,7 +115,7 @@ export function MobileNav() {
                 )}
               >
                 <Icon className="h-5 w-5" aria-hidden />
-                <span>{label}</span>
+                <span>{t.nav[key]}</span>
               </Link>
             </li>
           );

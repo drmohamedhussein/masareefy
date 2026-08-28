@@ -107,6 +107,87 @@ class Masareefy_REST {
 				),
 			)
 		);
+
+		register_rest_route(
+			'masareefy/v1',
+			'/work-log',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( self::class, 'list_work_log' ),
+					'permission_callback' => array( self::class, 'permission_check' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( self::class, 'create_work_log' ),
+					'permission_callback' => array( self::class, 'manage_permission_check' ),
+				),
+			)
+		);
+
+		register_rest_route(
+			'masareefy/v1',
+			'/work-log/(?P<id>\d+)',
+			array(
+				array(
+					'methods'             => WP_REST_Server::EDITABLE,
+					'callback'            => array( self::class, 'update_work_log' ),
+					'permission_callback' => array( self::class, 'manage_permission_check' ),
+					'args'                => array(
+						'id' => array(
+							'type'              => 'integer',
+							'required'          => true,
+							'sanitize_callback' => 'absint',
+						),
+					),
+				),
+				array(
+					'methods'             => WP_REST_Server::DELETABLE,
+					'callback'            => array( self::class, 'delete_work_log' ),
+					'permission_callback' => array( self::class, 'manage_permission_check' ),
+					'args'                => array(
+						'id' => array(
+							'type'              => 'integer',
+							'required'          => true,
+							'sanitize_callback' => 'absint',
+						),
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			'masareefy/v1',
+			'/sync/notion/pull',
+			array(
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( self::class, 'sync_notion_pull' ),
+					'permission_callback' => array( self::class, 'manage_permission_check' ),
+				),
+			)
+		);
+
+		register_rest_route(
+			'masareefy/v1',
+			'/sync/google/push',
+			array(
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( self::class, 'sync_google_push' ),
+					'permission_callback' => array( self::class, 'manage_permission_check' ),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Site owners can manage work log entries.
+	 *
+	 * @return bool
+	 */
+	public static function manage_permission_check(): bool {
+		return current_user_can('manage_options') || current_user_can('edit_posts');
 	}
 
 	/**
@@ -213,6 +294,121 @@ class Masareefy_REST {
 			array(
 				'deleted' => true,
 				'id'      => $id,
+			)
+		);
+	}
+
+	/**
+	 * GET /work-log
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function list_work_log() {
+		$repo = new Masareefy_Work_Log_Repository();
+		return rest_ensure_response($repo->get_all());
+	}
+
+	/**
+	 * POST /work-log
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function create_work_log(WP_REST_Request $request) {
+		$repo  = new Masareefy_Work_Log_Repository();
+		$entry = $repo->create($request->get_json_params() ?? array());
+
+		if ($entry === null) {
+			return new WP_Error(
+				'masareefy_work_log_create_failed',
+				__('Could not create work log entry.', 'masareefy'),
+				array( 'status' => 500 )
+			);
+		}
+
+		Masareefy_Sync::push_to_notion($entry);
+		Masareefy_Sync::push_to_google(array( $entry ));
+
+		return rest_ensure_response($entry);
+	}
+
+	/**
+	 * PATCH /work-log/{id}
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function update_work_log(WP_REST_Request $request) {
+		$id    = (int) $request->get_param('id');
+		$repo  = new Masareefy_Work_Log_Repository();
+		$entry = $repo->update($id, $request->get_json_params() ?? array());
+
+		if ($entry === null) {
+			return new WP_Error(
+				'masareefy_work_log_update_failed',
+				__('Work log entry not found.', 'masareefy'),
+				array( 'status' => 404 )
+			);
+		}
+
+		Masareefy_Sync::push_to_notion($entry);
+
+		return rest_ensure_response($entry);
+	}
+
+	/**
+	 * DELETE /work-log/{id}
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function delete_work_log(WP_REST_Request $request) {
+		$id     = (int) $request->get_param('id');
+		$repo   = new Masareefy_Work_Log_Repository();
+		$delete = $repo->delete($id);
+
+		if (! $delete) {
+			return new WP_Error(
+				'masareefy_work_log_delete_failed',
+				__('Work log entry not found.', 'masareefy'),
+				array( 'status' => 404 )
+			);
+		}
+
+		return rest_ensure_response(
+			array(
+				'deleted' => true,
+				'id'      => $id,
+			)
+		);
+	}
+
+	/**
+	 * POST /sync/notion/pull
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function sync_notion_pull() {
+		$imported = Masareefy_Sync::pull_from_notion();
+		return rest_ensure_response(
+			array(
+				'imported' => count($imported),
+				'entries'  => $imported,
+			)
+		);
+	}
+
+	/**
+	 * POST /sync/google/push
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function sync_google_push() {
+		$repo = new Masareefy_Work_Log_Repository();
+		$ok   = Masareefy_Sync::push_to_google($repo->get_all());
+		return rest_ensure_response(
+			array(
+				'synced' => $ok,
 			)
 		);
 	}

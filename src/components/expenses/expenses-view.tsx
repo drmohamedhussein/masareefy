@@ -8,6 +8,7 @@ import { useExpenses } from "@/components/expenses/expenses-provider";
 import { ExpensesTable } from "@/components/expenses/expenses-table";
 import { ReceiptScanButton } from "@/components/expenses/receipt-scan-button";
 import { useClientMounted } from "@/lib/hooks/use-client-mounted";
+import { useI18n } from "@/components/providers/locale-provider";
 import { useCallback, useMemo, useState } from "react";
 
 export function ExpensesView({ compact = false }: { compact?: boolean }) {
@@ -35,6 +36,7 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
     dismissUndo,
   } = useExpenses();
 
+  const { t } = useI18n();
   const mounted = useClientMounted();
 
   const [focusNewRowId, setFocusNewRowId] = useState<string | null>(null);
@@ -69,7 +71,7 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
         className="rounded-xl border border-[var(--border)] bg-white p-8 text-sm text-[var(--muted-foreground)]"
         suppressHydrationWarning
       >
-        جاري تحميل مصاريفك…
+        {t.expenses.loading}
       </div>
     );
   }
@@ -78,10 +80,8 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
     <div className="space-y-4">
       {!compact && (
         <header className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">المصاريف</h1>
-          <p className="text-sm text-[var(--muted-foreground)]">
-            سجّل مشترياتك بسرعة — وسوم Notion · مزامنة Google Sheets
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t.expenses.title}</h1>
+          <p className="text-sm text-[var(--muted-foreground)]">{t.expenses.subtitle}</p>
         </header>
       )}
 
@@ -93,11 +93,11 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
               : "border-[var(--border)] bg-white text-[var(--muted-foreground)]"
           }`}
         >
-          ميزانية الشهر: {formatMoney(profile.monthlyBudget, currency)} — صُرف{" "}
+          {t.expenses.budgetMonth}: {formatMoney(profile.monthlyBudget, currency)} — {t.expenses.spent}{" "}
           {formatMoney(monthTotal, currency)}
           {budget.remaining != null &&
-            ` — المتبقي ${formatMoney(Math.max(budget.remaining, 0), currency)}`}
-          {budget.over && " — تجاوزت الحد"}
+            ` — ${t.expenses.remaining} ${formatMoney(Math.max(budget.remaining, 0), currency)}`}
+          {budget.over && ` — ${t.expenses.overBudget}`}
         </div>
       )}
 
@@ -109,11 +109,11 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
               checked={showAllDates}
               onChange={(event) => setShowAllDates(event.target.checked)}
             />
-            <span>كل الأيام</span>
+            <span>{t.expenses.allDays}</span>
           </label>
 
           <label className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm shadow-[var(--shadow-sm)]">
-            <span className="text-[var(--muted)]">التاريخ</span>
+            <span className="text-[var(--muted)]">{t.expenses.date}</span>
             <input
               type="date"
               value={selectedDate}
@@ -129,7 +129,7 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="بحث بالاسم أو الوسم أو الملاحظات"
+              placeholder={t.expenses.search}
               className="w-full rounded-lg border border-[var(--border)] bg-white py-2 pe-3 ps-9 text-sm shadow-[var(--shadow-sm)] outline-none focus:border-[var(--accent)]"
             />
           </label>
@@ -138,9 +138,9 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
             value={tagFilter}
             onChange={(event) => setTagFilter(event.target.value)}
             className="rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm shadow-[var(--shadow-sm)]"
-            aria-label="تصفية بالوسم"
+            aria-label={t.expenses.filterByTag}
           >
-            <option value="">كل التصنيفات</option>
+            <option value="">{t.expenses.allTags}</option>
             {DEFAULT_TAGS.map((tag) => (
               <option key={tag} value={tag}>
                 {tag}
@@ -157,7 +157,7 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-sm)] hover:opacity-90"
           >
             <Plus className="h-4 w-4" />
-            إضافة مصروف
+            {t.expenses.addExpense}
           </button>
         </div>
       </div>
@@ -183,7 +183,7 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
 
       <footer className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm shadow-[var(--shadow-sm)]">
         <p className="text-[var(--muted-foreground)]">
-          عدد المشتريات:{" "}
+          {t.expenses.purchaseCount}:{" "}
           <span className="font-semibold text-[var(--foreground)]">{totals.count}</span>
           {!showAllDates && expenses.length > visibleExpenses.length && (
             <span className="ms-2 text-xs">
@@ -192,7 +192,7 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
           )}
         </p>
         <p className="text-[var(--muted-foreground)]">
-          الإجمالي:{" "}
+          {t.expenses.total}:{" "}
           <span className="font-semibold text-[var(--foreground)]">
             {formatMoney(totals.total, currency)}
           </span>
@@ -201,20 +201,20 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
 
       {pendingUndo && (
         <div className="fixed inset-x-4 bottom-20 z-50 mx-auto flex max-w-lg items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--foreground)] px-4 py-3 text-sm text-white shadow-lg md:bottom-6">
-          <span>تم حذف «{pendingUndo.expense.itemName || "مصروف"}»</span>
+          <span>{t.expenses.deleted} «{pendingUndo.expense.itemName || t.expenses.title}»</span>
           <div className="flex items-center gap-2">
             <button
               type="button"
               className="rounded-md bg-white/15 px-3 py-1.5 hover:bg-white/25"
               onClick={() => void undoDelete()}
             >
-              تراجع
+              {t.expenses.undo}
             </button>
             <button
               type="button"
               className="rounded-md px-2 py-1.5 text-white/70 hover:text-white"
               onClick={dismissUndo}
-              aria-label="إغلاق"
+              aria-label={t.expenses.close}
             >
               ✕
             </button>
@@ -226,7 +226,7 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
         type="button"
         onClick={() => void handleAdd()}
         className="fixed bottom-20 end-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-lg md:bottom-6"
-        aria-label="إضافة مصروف"
+        aria-label={t.expenses.addAria}
       >
         <Plus className="h-6 w-6" />
       </button>

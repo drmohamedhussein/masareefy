@@ -26,6 +26,7 @@ import { todayISO } from "@/core/date-range";
 import { normalizeSpentOn } from "@/core/spent-on";
 import { getExpenseRepository } from "@/lib/storage/get-repository";
 import { syncExpensesEverywhere } from "@/lib/sync/everywhere";
+import { markSyncPending, markSyncComplete } from "@/lib/sync/sync-state";
 import { normalizeTags } from "@/core/export";
 import { draftsDueToday } from "@/core/recurring";
 import {
@@ -208,11 +209,13 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const syncQuietly = useCallback(async () => {
+    markSyncPending();
     try {
       const rows = await repo.listExpenses();
       await syncExpensesEverywhere(rows);
+      markSyncComplete();
     } catch {
-      // الربط اختياري
+      /* optional — stays pending until online */
     }
   }, [repo]);
 

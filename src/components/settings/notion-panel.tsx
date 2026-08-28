@@ -74,29 +74,30 @@ export function NotionPanel() {
       <section className="rounded-xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-sm)]">
         <h2 className="mb-1 font-medium">ربط Notion — مزامنة فورية</h2>
         <p className="mb-4 text-sm leading-7 text-[var(--muted-foreground)]">
-          اربط قاعدة Notion (Name, Amount, Date, Tags, Notes, ExpenseId). كل
-          تعديل في مصاريفي يُزامَن تلقائيًا. يمكنك أيضًا استيراد أو تصدير كامل
-          البيانات.
+          Link your personal Notion workspace to keep expenses in sync. Changes in
+          Masareefy update automatically. You can also import or export your
+          full data.
         </p>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-sm">
-            Integration Token
+            Notion access token
             <input
               type="password"
               value={token}
               onChange={(e) => setToken(e.target.value)}
               className="mt-1 w-full rounded-lg border border-[var(--border)] px-3 py-2"
-              placeholder="secret_..."
+              placeholder="Paste from Notion integrations"
+              autoComplete="off"
             />
           </label>
           <label className="text-sm">
-            Database ID
+            Database link or ID
             <input
               value={databaseId}
               onChange={(e) => setDatabaseId(e.target.value)}
               className="mt-1 w-full rounded-lg border border-[var(--border)] px-3 py-2"
-              placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              placeholder="From your Notion database URL"
             />
           </label>
         </div>
@@ -227,12 +228,11 @@ export function NotionPanel() {
       </section>
 
       <details className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm leading-7">
-        <summary className="cursor-pointer font-medium">دليل Notion السريع</summary>
+        <summary className="cursor-pointer font-medium">How to connect Notion</summary>
         <ol className="mt-2 list-decimal space-y-1 pe-5 text-[var(--muted-foreground)]">
-          <li>notion.so/my-integrations ← New integration ← انسخ Token.</li>
-          <li>أنشئ Database بالخصائص: Name, Amount, Date, Tags, Notes, ExpenseId.</li>
-          <li>Connections ← أضف الـ Integration للقاعدة.</li>
-          <li>انسخ Database ID من الرابط والصقه هنا.</li>
+          <li>Create an integration at notion.so/my-integrations and copy the token.</li>
+          <li>Create a database for your expenses and connect the integration to it.</li>
+          <li>Copy the database ID from the URL and paste it above.</li>
         </ol>
       </details>
     </div>

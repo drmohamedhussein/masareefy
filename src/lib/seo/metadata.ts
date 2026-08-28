@@ -39,7 +39,7 @@ export function webApplicationJsonLd() {
     "@context": "https://schema.org",
     "@type": "WebApplication",
     name: SITE.name,
-    alternateName: SITE.nameEn,
+    alternateName: SITE.nameAr,
     url: SITE.url,
     applicationCategory: "FinanceApplication",
     operatingSystem: "Web, Android, iOS",
@@ -70,7 +70,6 @@ export function organizationJsonLd() {
     "@type": "Organization",
     name: SITE.name,
     url: SITE.url,
-    email: SITE.email,
     description: SITE.description,
   };
 }

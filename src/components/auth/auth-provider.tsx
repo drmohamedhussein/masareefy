@@ -21,7 +21,6 @@ import { getExpenseRepository } from "@/lib/storage/get-repository";
 interface AuthContextValue {
   sessionRole: SessionRole;
   isAdmin: boolean;
-  adminEmail: string;
   loginAdmin: (pin: string) => Promise<boolean>;
   logoutAdmin: () => void;
   elevateIfAdminEmail: (email: string | null) => Promise<void>;
@@ -41,7 +40,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginAdmin = useCallback(
     async (pin: string) => {
       const profileEmail = profile?.email?.toLowerCase() ?? null;
-      if (profileEmail && profileEmail !== ADMIN_EMAIL.toLowerCase()) {
+      if (
+        ADMIN_EMAIL &&
+        profileEmail &&
+        profileEmail !== ADMIN_EMAIL.toLowerCase()
+      ) {
         return false;
       }
 
@@ -64,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const elevateIfAdminEmail = useCallback(
     async (email: string | null) => {
-      if (!email || email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) return;
+      if (!email || !ADMIN_EMAIL || email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) return;
       await repo.updateProfile({ email: ADMIN_EMAIL, role: "admin" });
       await refresh();
       setSessionRole("admin");
@@ -82,7 +85,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       sessionRole,
       isAdmin: sessionRole === "admin",
-      adminEmail: ADMIN_EMAIL,
       loginAdmin,
       logoutAdmin,
       elevateIfAdminEmail,

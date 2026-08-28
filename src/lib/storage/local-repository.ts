@@ -42,6 +42,7 @@ function defaultStore(): LocalStore {
       displayName: "أنا",
       email: null,
       role: "user",
+      locale: "en",
       currency: "EGP",
       timezone: "Africa/Cairo",
       monthlyBudget: null,
@@ -115,6 +116,7 @@ function parseStorePayload(
       ...parsed.profile,
       email: parsed.profile.email ?? null,
       role: parsed.profile.role ?? "user",
+      locale: parsed.profile.locale === "ar" ? "ar" : "en",
       adminPinHash: parsed.profile.adminPinHash ?? null,
       monthlyBudget: parsed.profile.monthlyBudget ?? null,
     },
@@ -451,6 +453,7 @@ export class LocalExpenseRepository implements ExpenseRepository {
         | "timezone"
         | "monthlyBudget"
         | "adminPinHash"
+        | "locale"
       >
     >,
   ): Promise<Profile> {
@@ -474,6 +477,8 @@ export class LocalExpenseRepository implements ExpenseRepository {
         patch.adminPinHash !== undefined
           ? patch.adminPinHash
           : store.profile.adminPinHash,
+      locale:
+        patch.locale !== undefined ? patch.locale : store.profile.locale,
     };
     writeStore(store);
     return store.profile;

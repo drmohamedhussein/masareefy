@@ -30,6 +30,7 @@ export interface ExpenseRepository {
         | "timezone"
         | "monthlyBudget"
         | "adminPinHash"
+        | "locale"
       >
     >,
   ): Promise<Profile>;

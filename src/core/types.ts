@@ -27,11 +27,14 @@ export type UserRole = "admin" | "user";
 
 export type SubscriptionCycle = "weekly" | "monthly" | "yearly";
 
+export type LocaleCode = "en" | "ar";
+
 export interface Profile {
   id: string;
   displayName: string | null;
   email: string | null;
   role: UserRole;
+  locale: LocaleCode;
   currency: CurrencyCode;
   timezone: string;
   /** حد الميزانية الشهرية بالجنيه — null = بدون حد */

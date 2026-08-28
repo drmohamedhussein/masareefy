@@ -4,7 +4,7 @@ import { getPublicEnv, isSupabaseConfigured } from "@/lib/env";
 export function createClient() {
   if (!isSupabaseConfigured()) {
     throw new Error(
-      "Supabase غير مضبوط. أضف NEXT_PUBLIC_SUPABASE_URL و NEXT_PUBLIC_SUPABASE_ANON_KEY في .env.local",
+      "Cloud sync is not configured for this installation.",
     );
   }
 

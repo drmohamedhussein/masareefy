@@ -70,9 +70,8 @@ export function GoogleSheetsPanel() {
 
         {!configured && (
           <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            ضبط{" "}
-            <code className="rounded bg-white px-1">NEXT_PUBLIC_GOOGLE_CLIENT_ID</code>{" "}
-            مرة واحدة في Google Cloud (فعّل Sheets API + Drive API + Calendar API).
+            Google connection is not enabled on this site yet. Contact the site
+            administrator if you need sync.
           </div>
         )}
 
@@ -242,26 +241,6 @@ export function GoogleSheetsPanel() {
         )}
       </section>
 
-      <details className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm leading-7 text-[var(--muted-foreground)]">
-        <summary className="cursor-pointer font-medium text-[var(--foreground)]">
-          دليل الإعداد — Google Cloud
-        </summary>
-        <ol className="mt-3 list-decimal space-y-1 pe-5">
-          <li>
-            فعّل: Google Sheets API + Google Drive API + Google Calendar API
-          </li>
-          <li>OAuth consent screen ← أضف النطاقات الثلاثة</li>
-          <li>
-            Authorized JavaScript origins:{" "}
-            <code className="rounded bg-white px-1">http://localhost:3737</code>{" "}
-            + رابط النشر
-          </li>
-          <li>
-            انسخ Client ID إلى{" "}
-            <code className="rounded bg-white px-1">NEXT_PUBLIC_GOOGLE_CLIENT_ID</code>
-          </li>
-        </ol>
-      </details>
     </div>
   );
 }
