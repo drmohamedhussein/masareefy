@@ -18,6 +18,8 @@ import type {
   ExpenseSortKey,
   Profile,
   SortDirection,
+  Subscription,
+  SubscriptionDraft,
 } from "@/core/types";
 import { filterExpenses } from "@/core/expense-filters";
 import { todayISO } from "@/core/date-range";
@@ -26,7 +28,15 @@ import { getExpenseRepository } from "@/lib/storage/get-repository";
 import { syncExpensesEverywhere } from "@/lib/sync/everywhere";
 import { normalizeTags } from "@/core/export";
 import { draftsDueToday } from "@/core/recurring";
+import {
+  isSubscriptionExpense,
+  subscriptionFromExpense,
+} from "@/core/subscriptions";
 import { initPreferencesBridge } from "@/lib/storage/preferences-bridge";
+import {
+  loadCalendarConnection,
+  upsertCalendarReminderEvent,
+} from "@/lib/google/calendar";
 
 interface PendingUndo {
   expense: Expense;
@@ -36,6 +46,7 @@ interface PendingUndo {
 interface ExpensesContextValue {
   expenses: Expense[];
   visibleExpenses: Expense[];
+  subscriptions: Subscription[];
   profile: Profile | null;
   loading: boolean;
   selectedDate: string;
@@ -57,6 +68,17 @@ interface ExpensesContextValue {
   undoDelete: () => Promise<void>;
   dismissUndo: () => void;
   updateCurrency: (currency: CurrencyCode) => Promise<void>;
+  addSubscription: (draft: SubscriptionDraft) => Promise<Subscription>;
+  updateSubscription: (
+    id: string,
+    patch: Partial<SubscriptionDraft>,
+  ) => Promise<Subscription>;
+  deleteSubscription: (id: string) => Promise<void>;
+  getSubscriptionForExpense: (expenseId: string) => Subscription | null;
+  syncSubscriptionReminders: (
+    subscriptionId: string,
+    patch: Partial<SubscriptionDraft>,
+  ) => Promise<void>;
 }
 
 const ExpensesContext = createContext<ExpensesContextValue | null>(null);
@@ -64,6 +86,7 @@ const ExpensesContext = createContext<ExpensesContextValue | null>(null);
 export function ExpensesProvider({ children }: { children: React.ReactNode }) {
   const repo = useMemo(() => getExpenseRepository(), []);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDateRaw] = useState(todayISO());
@@ -82,15 +105,41 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
   }, [sortKey, sortDirection]);
 
   const refresh = useCallback(async () => {
-    const [rows, nextProfile] = await Promise.all([
+    const [rows, nextProfile, subs] = await Promise.all([
       repo.listExpenses(),
       repo.getProfile(),
+      repo.listSubscriptions?.() ?? Promise.resolve([]),
     ]);
     startTransition(() => {
       setExpenses(rows);
+      setSubscriptions(subs);
       setProfile(nextProfile);
       setLoading(false);
     });
+  }, [repo]);
+
+  const syncCalendarEvent = useCallback(async (sub: Subscription) => {
+    const conn = loadCalendarConnection();
+    if (!sub.notifyEnabled || !conn?.calendarAutoSync) return;
+    if (!repo.updateSubscription) return;
+    try {
+      const eventId = await upsertCalendarReminderEvent({
+        subscriptionId: sub.id,
+        title: sub.title,
+        renewalDate: sub.nextRenewalDate,
+        notifyTime: sub.notifyTime,
+        daysBefore: sub.notifyDaysBefore,
+        amount: sub.amount,
+        existingEventId: sub.googleCalendarEventId,
+      });
+      if (eventId !== sub.googleCalendarEventId) {
+        await repo.updateSubscription(sub.id, {
+          googleCalendarEventId: eventId,
+        });
+      }
+    } catch {
+      /* optional */
+    }
   }, [repo]);
 
   useEffect(() => {
@@ -188,10 +237,48 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
     [repo, refresh, selectedDate, syncQuietly],
   );
 
+  const syncExpenseSubscriptionLink = useCallback(
+    async (expense: Expense, nextTags: string[]) => {
+      if (!repo.createSubscription || !repo.updateSubscription) return;
+
+      const tagged = isSubscriptionExpense({ tags: nextTags });
+      const existing = subscriptions.find(
+        (s) => s.id === expense.subscriptionId || s.expenseId === expense.id,
+      );
+
+      if (tagged && !existing) {
+        const draft = subscriptionFromExpense({ ...expense, tags: nextTags });
+        await repo.createSubscription(draft);
+        await refresh();
+        return;
+      }
+
+      if (tagged && existing) {
+        await repo.updateSubscription(existing.id, {
+          title: expense.itemName || existing.title,
+          amount: expense.amount,
+          expenseId: expense.id,
+        });
+        await refresh();
+        return;
+      }
+
+      if (!tagged && existing?.expenseId === expense.id) {
+        await repo.updateSubscription(existing.id, { expenseId: null });
+        await refresh();
+      }
+    },
+    [repo, refresh, subscriptions],
+  );
+
   const updateExpense = useCallback(
     async (id: string, patch: Partial<ExpenseDraft>) => {
-      setExpenses((current) =>
-        current.map((item) => {
+      const current = expenses.find((item) => item.id === id);
+      const nextTags =
+        patch.tags !== undefined ? normalizeTags(patch.tags) : current?.tags ?? [];
+
+      setExpenses((list) =>
+        list.map((item) => {
           if (item.id !== id) return item;
           return {
             ...item,
@@ -203,8 +290,7 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
                 : item.amount,
             itemName:
               patch.itemName !== undefined ? patch.itemName : item.itemName,
-            tags:
-              patch.tags !== undefined ? normalizeTags(patch.tags) : item.tags,
+            tags: patch.tags !== undefined ? nextTags : item.tags,
             notes:
               patch.notes !== undefined
                 ? patch.notes?.trim()
@@ -217,9 +303,15 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
         }),
       );
       await repo.updateExpense(id, patch);
+      if (current && patch.tags !== undefined) {
+        await syncExpenseSubscriptionLink(
+          { ...current, tags: nextTags },
+          nextTags,
+        );
+      }
       void syncQuietly();
     },
-    [repo, syncQuietly],
+    [expenses, repo, syncExpenseSubscriptionLink, syncQuietly],
   );
 
   const dismissUndo = useCallback(() => {
@@ -275,10 +367,68 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
     [repo, refresh],
   );
 
+  const addSubscription = useCallback(
+    async (draft: SubscriptionDraft) => {
+      if (!repo.createSubscription) {
+        throw new Error("الاشتراكات غير مدعومة");
+      }
+      const created = await repo.createSubscription(draft);
+      await refresh();
+      if (created.notifyEnabled) {
+        await syncCalendarEvent(created);
+      }
+      return created;
+    },
+    [repo, refresh, syncCalendarEvent],
+  );
+
+  const updateSubscription = useCallback(
+    async (id: string, patch: Partial<SubscriptionDraft>) => {
+      if (!repo.updateSubscription) {
+        throw new Error("الاشتراكات غير مدعومة");
+      }
+      const updated = await repo.updateSubscription(id, patch);
+      await refresh();
+      if (updated.notifyEnabled) {
+        await syncCalendarEvent(updated);
+      }
+      return updated;
+    },
+    [repo, refresh, syncCalendarEvent],
+  );
+
+  const deleteSubscription = useCallback(
+    async (id: string) => {
+      if (!repo.deleteSubscription) return;
+      await repo.deleteSubscription(id);
+      await refresh();
+    },
+    [repo, refresh],
+  );
+
+  const getSubscriptionForExpense = useCallback(
+    (expenseId: string) =>
+      subscriptions.find(
+        (s) => s.expenseId === expenseId || expenses.find((e) => e.id === expenseId)?.subscriptionId === s.id,
+      ) ?? null,
+    [subscriptions, expenses],
+  );
+
+  const syncSubscriptionReminders = useCallback(
+    async (subscriptionId: string, patch: Partial<SubscriptionDraft>) => {
+      const updated = await updateSubscription(subscriptionId, patch);
+      if (updated.notifyEnabled) {
+        await syncCalendarEvent(updated);
+      }
+    },
+    [updateSubscription, syncCalendarEvent],
+  );
+
   const value = useMemo<ExpensesContextValue>(
     () => ({
       expenses,
       visibleExpenses,
+      subscriptions,
       profile,
       loading,
       selectedDate,
@@ -300,10 +450,16 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
       undoDelete,
       dismissUndo,
       updateCurrency,
+      addSubscription,
+      updateSubscription,
+      deleteSubscription,
+      getSubscriptionForExpense,
+      syncSubscriptionReminders,
     }),
     [
       expenses,
       visibleExpenses,
+      subscriptions,
       profile,
       loading,
       selectedDate,
@@ -321,6 +477,11 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
       undoDelete,
       dismissUndo,
       updateCurrency,
+      addSubscription,
+      updateSubscription,
+      deleteSubscription,
+      getSubscriptionForExpense,
+      syncSubscriptionReminders,
     ],
   );
 

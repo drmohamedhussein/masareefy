@@ -3,6 +3,7 @@ import { resolveDateRange, isDateInRange, daysInRange } from "../date-range";
 import { summarizeAnalytics, totalForExpenses } from "../analytics";
 import { filterExpenses, withSequentialNumbers } from "../expense-filters";
 import { formatMoney, parseAmountInput, sumAmounts } from "../money";
+import { advanceRenewalDate, sortSubscriptionsByRenewal } from "../subscriptions";
 import { normalizeSpentOn } from "../spent-on";
 import type { Expense } from "../types";
 
@@ -11,6 +12,7 @@ function expense(partial: Partial<Expense> & Pick<Expense, "id" | "amount" | "it
     userId: "user-1",
     notes: null,
     tags: [],
+    subscriptionId: null,
     createdAt: "2026-08-01T10:00:00.000Z",
     updatedAt: "2026-08-01T10:00:00.000Z",
     ...partial,
@@ -206,6 +208,52 @@ describe("recurring", () => {
     );
     expect(drafts).toHaveLength(1);
     expect(drafts[0]?.itemName).toBe("إيجار");
+  });
+});
+
+describe("subscriptions", () => {
+  it("advances monthly renewal", () => {
+    expect(advanceRenewalDate("2026-08-15", "monthly")).toBe("2026-09-15");
+  });
+
+  it("sorts by next renewal date", () => {
+    const sorted = sortSubscriptionsByRenewal([
+      {
+        id: "b",
+        title: "B",
+        amount: 10,
+        cycle: "monthly",
+        renewalDay: 15,
+        nextRenewalDate: "2026-09-01",
+        expenseId: null,
+        notifyEnabled: false,
+        notifyDaysBefore: 1,
+        notifyTime: "09:00",
+        googleCalendarEventId: null,
+        active: true,
+        notes: null,
+        createdAt: "",
+        updatedAt: "",
+      },
+      {
+        id: "a",
+        title: "A",
+        amount: 10,
+        cycle: "monthly",
+        renewalDay: 1,
+        nextRenewalDate: "2026-08-01",
+        expenseId: null,
+        notifyEnabled: false,
+        notifyDaysBefore: 1,
+        notifyTime: "09:00",
+        googleCalendarEventId: null,
+        active: true,
+        notes: null,
+        createdAt: "",
+        updatedAt: "",
+      },
+    ]);
+    expect(sorted.map((s) => s.id)).toEqual(["a", "b"]);
   });
 });
 

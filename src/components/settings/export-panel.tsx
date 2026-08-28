@@ -148,26 +148,25 @@ export function ExportPanel() {
               if (!connection?.spreadsheetId) {
                 const created = await createMasareefySpreadsheet(accessToken);
                 connection = {
-                  ...(connection || {
-                    accessToken,
-                    expiresAt: Date.now() + 3500_000,
-                    email: null,
-                    autoSync: true,
-                    spreadsheetId: null,
-                    spreadsheetUrl: null,
-                    spreadsheetTitle: null,
-                  }),
                   accessToken,
+                  expiresAt: Date.now() + 3500_000,
+                  email: connection?.email ?? null,
                   spreadsheetId: created.spreadsheetId,
                   spreadsheetUrl: created.spreadsheetUrl,
                   spreadsheetTitle: created.title,
+                  sheetsAutoSync: connection?.sheetsAutoSync ?? true,
+                  calendarId: connection?.calendarId ?? "primary",
+                  calendarAutoSync: connection?.calendarAutoSync ?? true,
                 };
                 saveGoogleConnection(connection);
               }
 
+              const spreadsheetId = connection.spreadsheetId;
+              if (!spreadsheetId) return;
+
               await writeExpensesToSpreadsheet(
                 accessToken,
-                connection.spreadsheetId!,
+                spreadsheetId,
                 selected,
               );
               setMessage(

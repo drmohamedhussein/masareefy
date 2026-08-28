@@ -67,13 +67,78 @@ async function listExisting(
   return map;
 }
 
+async function fetchAllPages(token: string, databaseId: string) {
+  const pages: Array<{
+    id: string;
+    properties: Record<string, unknown>;
+  }> = [];
+  let cursor: string | undefined;
+  do {
+    const response = await fetch(
+      `https://api.notion.com/v1/databases/${databaseId}/query`,
+      {
+        method: "POST",
+        headers: notionHeaders(token),
+        body: JSON.stringify({ start_cursor: cursor, page_size: 100 }),
+      },
+    );
+    if (!response.ok) break;
+    const data = (await response.json()) as {
+      results: Array<{ id: string; properties: Record<string, unknown> }>;
+      next_cursor?: string | null;
+      has_more?: boolean;
+    };
+    pages.push(...data.results);
+    cursor = data.has_more ? data.next_cursor ?? undefined : undefined;
+  } while (cursor);
+  return pages;
+}
+
+function textFromRich(prop: unknown): string {
+  const rich = prop as { rich_text?: Array<{ plain_text?: string }> };
+  return rich?.rich_text?.[0]?.plain_text ?? "";
+}
+
+function titleFromProp(prop: unknown): string {
+  const title = prop as { title?: Array<{ plain_text?: string }> };
+  return title?.title?.[0]?.plain_text ?? "";
+}
+
+function notionPageToExpense(
+  page: { id: string; properties: Record<string, unknown> },
+  userId: string,
+): Expense {
+  const now = new Date().toISOString();
+  const expenseId = textFromRich(page.properties.ExpenseId) || `notion_${page.id}`;
+  const tagsProp = page.properties.Tags as {
+    multi_select?: Array<{ name?: string }>;
+  };
+  const dateProp = page.properties.Date as { date?: { start?: string } };
+  const amountProp = page.properties.Amount as { number?: number | null };
+
+  return {
+    id: expenseId,
+    userId,
+    amount: amountProp?.number ?? null,
+    itemName: titleFromProp(page.properties.Name) || "مصروف",
+    tags: normalizeTags(
+      (tagsProp?.multi_select ?? []).map((t) => t.name ?? "").filter(Boolean),
+    ),
+    notes: textFromRich(page.properties.Notes) || null,
+    spentOn: dateProp?.date?.start?.slice(0, 10) ?? now.slice(0, 10),
+    subscriptionId: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
       token?: string;
       databaseId?: string;
       expenses?: Expense[];
-      action?: "verify" | "sync";
+      action?: "verify" | "sync" | "import";
     };
 
     if (!body.token || !body.databaseId) {
@@ -97,6 +162,18 @@ export async function POST(request: Request) {
       const title =
         data.title?.map((t) => t.plain_text ?? "").join("") || "Notion DB";
       return NextResponse.json({ title });
+    }
+
+    if (body.action === "import") {
+      const pages = await fetchAllPages(body.token, body.databaseId);
+      const expenses = pages.map((page) =>
+        notionPageToExpense(page, "local-user"),
+      );
+      return NextResponse.json({ expenses, count: expenses.length });
+    }
+
+    if (body.action !== "sync") {
+      return NextResponse.json({ error: "إجراء غير معروف" }, { status: 400 });
     }
 
     const expenses = body.expenses ?? [];

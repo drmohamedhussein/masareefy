@@ -8,6 +8,7 @@ import { GoogleSheetsPanel } from "@/components/settings/google-sheets-panel";
 import { NotionPanel } from "@/components/settings/notion-panel";
 import { RecurringPanel } from "@/components/settings/recurring-panel";
 import { useExpenses } from "@/components/expenses/expenses-provider";
+import { useAuth } from "@/components/auth/auth-provider";
 import { getExpenseRepository } from "@/lib/storage/get-repository";
 import { cn } from "@/lib/utils";
 
@@ -22,12 +23,13 @@ const TABS: Array<{ id: SettingsTab; label: string; icon: React.ReactNode }> = [
   { id: "general", label: "عام", icon: <Download className="h-4 w-4" /> },
   { id: "recurring", label: "متكررة", icon: <RefreshCw className="h-4 w-4" /> },
   { id: "export", label: "تصدير", icon: <FileUp className="h-4 w-4" /> },
-  { id: "google", label: "Google Sheets", icon: <Sheet className="h-4 w-4" /> },
+  { id: "google", label: "Google", icon: <Sheet className="h-4 w-4" /> },
   { id: "notion", label: "Notion", icon: <StickyNote className="h-4 w-4" /> },
 ];
 
 export function SettingsClient() {
   const { profile, refresh } = useExpenses();
+  const { isAdmin } = useAuth();
   const [tab, setTab] = useState<SettingsTab>("google");
   const [canInstall, setCanInstall] = useState(false);
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
@@ -154,6 +156,21 @@ export function SettingsClient() {
           <div className="rounded-xl border border-[var(--border)] bg-white p-5 text-sm shadow-[var(--shadow-sm)]">
             <p className="mb-1 font-medium">أين تُحفظ بياناتك؟</p>
             <p className="text-[var(--muted-foreground)]">{storageMode}</p>
+          </div>
+
+          <div className="rounded-xl border border-[var(--border)] bg-white p-5 text-sm shadow-[var(--shadow-sm)]">
+            <p className="mb-1 font-medium">لوحة الأدمن</p>
+            <p className="mb-3 text-[var(--muted-foreground)]">
+              {isAdmin
+                ? "أنت مسجّل كأدمن — إحصاءات وصلاحيات أعلى."
+                : "دخول برمز PIN لصلاحيات الإدارة."}
+            </p>
+            <a
+              href="/admin"
+              className="inline-flex rounded-lg border border-[var(--border)] px-4 py-2 text-sm hover:bg-[var(--hover)]"
+            >
+              {isAdmin ? "فتح لوحة الأدمن" : "دخول الأدمن"}
+            </a>
           </div>
         </div>
       )}

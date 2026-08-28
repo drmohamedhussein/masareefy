@@ -6,6 +6,7 @@ import type { Expense } from "@/core/types";
 import { DEFAULT_TAGS } from "@/core/types";
 import { parseAmountInput, isBlankAmountInput } from "@/core/money";
 import { normalizeTags } from "@/core/export";
+import { SubscriptionReminderButton } from "@/components/expenses/subscription-reminder-button";
 import { cn } from "@/lib/utils";
 
 type FocusField = "amount" | "itemName" | "tags" | "notes";
@@ -236,7 +237,7 @@ export function ExpensesTable({
                 </button>
               </th>
               <th className="min-w-[160px] px-3 py-2.5 text-start font-medium">ملاحظات</th>
-              <th className="w-12 px-2 py-2.5" aria-label="إجراءات" />
+              <th className="w-20 px-2 py-2.5" aria-label="تذكير وحذف" />
             </tr>
           </thead>
           <tbody>
@@ -314,15 +315,18 @@ export function ExpensesTable({
                     />
                   </td>
                   <td className="px-2 py-1">
-                    <button
-                      type="button"
-                      tabIndex={-1}
-                      aria-label="حذف المصروف"
-                      className="rounded p-1.5 text-[var(--muted)] opacity-0 transition hover:bg-red-50 hover:text-[var(--danger)] group-hover:opacity-100 focus:opacity-100"
-                      onClick={() => void onDelete(row.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center justify-end gap-0.5">
+                      <SubscriptionReminderButton expense={row} />
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        aria-label="حذف المصروف"
+                        className="rounded p-1.5 text-[var(--muted)] opacity-0 transition hover:bg-red-50 hover:text-[var(--danger)] group-hover:opacity-100 focus:opacity-100"
+                        onClick={() => void onDelete(row.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

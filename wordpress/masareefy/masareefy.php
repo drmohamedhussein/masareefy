@@ -3,7 +3,7 @@
  * Plugin Name:       مصاريفي
  * Plugin URI:        https://example.com/masareefy
  * Description:       متتبع مصاريف شخصي لكل مستخدم في ووردبريس.
- * Version:           1.0.0
+ * Version:           1.1.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Masareefy
@@ -19,7 +19,7 @@ if (! defined('ABSPATH')) {
 	exit;
 }
 
-define('MASAREEFY_VERSION', '1.0.0');
+define('MASAREEFY_VERSION', '1.1.0');
 define('MASAREEFY_PLUGIN_FILE', __FILE__);
 define('MASAREEFY_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('MASAREEFY_PLUGIN_URL', plugin_dir_url(__FILE__));

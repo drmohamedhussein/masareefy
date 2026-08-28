@@ -21,13 +21,23 @@ export const DEFAULT_TAGS = [
 
 export type DefaultTag = (typeof DEFAULT_TAGS)[number];
 
+export const SUBSCRIPTION_TAG = "اشتراكات" as const;
+
+export type UserRole = "admin" | "user";
+
+export type SubscriptionCycle = "weekly" | "monthly" | "yearly";
+
 export interface Profile {
   id: string;
   displayName: string | null;
+  email: string | null;
+  role: UserRole;
   currency: CurrencyCode;
   timezone: string;
   /** حد الميزانية الشهرية بالجنيه — null = بدون حد */
   monthlyBudget: number | null;
+  /** PIN مشفّر بسيط لدخول الأدمن — null = لم يُضبط بعد */
+  adminPinHash: string | null;
   createdAt: string;
 }
 
@@ -42,6 +52,8 @@ export interface Expense {
   notes: string | null;
   /** ISO date YYYY-MM-DD */
   spentOn: string;
+  /** ربط باشتراك عند تصنيف «اشتراكات» */
+  subscriptionId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -62,6 +74,44 @@ export interface RecurringExpense {
   dayOfMonth: number;
   active: boolean;
   notes: string | null;
+}
+
+/** اشتراك / تجديد — مرتبط بمصروف أو مستقل */
+export interface Subscription {
+  id: string;
+  title: string;
+  amount: number | null;
+  cycle: SubscriptionCycle;
+  /** يوم التجديد الشهري 1–28 */
+  renewalDay: number;
+  /** تاريخ التجديد القادم YYYY-MM-DD */
+  nextRenewalDate: string;
+  expenseId: string | null;
+  notifyEnabled: boolean;
+  /** 0 = نفس اليوم، 1 = قبل يوم، 3 = قبل 3 أيام */
+  notifyDaysBefore: number;
+  /** وقت التذكير HH:mm */
+  notifyTime: string;
+  googleCalendarEventId: string | null;
+  active: boolean;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SubscriptionDraft {
+  title: string;
+  amount?: number | null;
+  cycle?: SubscriptionCycle;
+  renewalDay?: number;
+  nextRenewalDate?: string;
+  expenseId?: string | null;
+  notifyEnabled?: boolean;
+  notifyDaysBefore?: number;
+  notifyTime?: string;
+  googleCalendarEventId?: string | null;
+  active?: boolean;
+  notes?: string | null;
 }
 
 export type ExpenseSortKey = "amount" | "itemName" | "spentOn" | "tags";

@@ -1,23 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ExternalLink, Link2, RefreshCw, Unplug } from "lucide-react";
-import { useExpenses } from "@/components/expenses/expenses-provider";
 import {
-  connectGoogleSheets,
+  Calendar,
+  ExternalLink,
+  Link2,
+  RefreshCw,
+  Unplug,
+} from "lucide-react";
+import { useExpenses } from "@/components/expenses/expenses-provider";
+import { useAuth } from "@/components/auth/auth-provider";
+import {
+  connectGoogle,
   createMasareefySpreadsheet,
-  disconnectGoogleSheets,
+  disconnectGoogle,
   ensureGoogleAccessToken,
   isGoogleConfigured,
   loadGoogleConnection,
   saveGoogleConnection,
   writeExpensesToSpreadsheet,
-  type GoogleSheetsConnection,
+  type GoogleConnection,
 } from "@/lib/google/sheets";
 
 export function GoogleSheetsPanel() {
   const { expenses } = useExpenses();
-  const [connection, setConnection] = useState<GoogleSheetsConnection | null>(null);
+  const { elevateIfAdminEmail } = useAuth();
+  const [connection, setConnection] = useState<GoogleConnection | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,69 +54,91 @@ export function GoogleSheetsPanel() {
   return (
     <div className="space-y-4">
       <section className="rounded-xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-sm)]">
-        <h2 className="mb-1 font-medium">الربط المباشر مع Google Sheets</h2>
+        <h2 className="mb-1 font-medium">ربط Google الموحّد</h2>
         <p className="mb-4 text-sm leading-7 text-[var(--muted-foreground)]">
-          كل مستخدم يربط <strong className="text-[var(--foreground)]">حساب Google الخاص به</strong> فقط.
-          الجدول يُنشأ في Google Drive الخاص به — أنت كصاحب التطبيق لا تخزّن ولا تتحكم
-          في بيانات المستخدمين. المزامنة تلقائية بعد كل تعديل.
+          ربط واحد لحسابك يشمل{" "}
+          <strong className="text-[var(--foreground)]">
+            Google Sheets + Drive + Calendar
+          </strong>
+          . توافق مرة واحدة فقط — لا حاجة لإعادة الربط لكل خدمة.
         </p>
 
         <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-          <strong>خصوصية البيانات:</strong> المصروفات تُحفظ على جهاز المستخدم محليًا،
-          ونسخة Google Sheets في حساب Gmail الخاص به. لا تمر عبر سيرفرك إلا إذا أضفت
-          تسجيل سحابي لاحقًا (Supabase).
+          <strong>خصوصية:</strong> البيانات في حساب Google الخاص بك فقط. كل
+          مستخدم يربط حسابه الشخصي.
         </div>
 
         {!configured && (
           <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            الربط المباشر يحتاج ضبط{" "}
+            ضبط{" "}
             <code className="rounded bg-white px-1">NEXT_PUBLIC_GOOGLE_CLIENT_ID</code>{" "}
-            مرة واحدة (انظر الدليل بالأسفل). حتى ذلك الحين يمكنك التصدير يدويًا من تبويب
-            التصدير.
+            مرة واحدة في Google Cloud (فعّل Sheets API + Drive API + Calendar API).
           </div>
         )}
 
         {connection?.email ? (
           <div className="space-y-3 text-sm">
             <p>
-              الحساب المرتبط:{" "}
+              الحساب:{" "}
               <span className="font-medium text-[var(--foreground)]">
                 {connection.email}
               </span>
             </p>
+
             {connection.spreadsheetUrl ? (
               <p className="flex flex-wrap items-center gap-2">
-                الجدول:{" "}
+                Google Sheets:{" "}
                 <a
                   href={connection.spreadsheetUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-1 text-[var(--accent)] hover:underline"
                 >
-                  {connection.spreadsheetTitle || "فتح Google Sheets"}
+                  {connection.spreadsheetTitle || "فتح الجدول"}
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
               </p>
             ) : (
               <p className="text-[var(--muted-foreground)]">
-                لا يوجد جدول مرتبط بعد — أنشئ واحدًا بالزر أدناه.
+                لا يوجد جدول بعد — أنشئ واحدًا بالزر أدناه.
               </p>
             )}
+
+            <p className="flex items-center gap-2 text-[var(--muted-foreground)]">
+              <Calendar className="h-4 w-4 text-[var(--accent)]" />
+              Google Calendar: مفعّل — تذكيرات الاشتراكات تُزامَن تلقائيًا
+            </p>
 
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
-                checked={connection.autoSync}
+                checked={connection.sheetsAutoSync}
                 onChange={(event) => {
                   const next = {
                     ...connection,
-                    autoSync: event.target.checked,
+                    sheetsAutoSync: event.target.checked,
                   };
                   saveGoogleConnection(next);
                   setConnection(next);
                 }}
               />
-              مزامنة تلقائية عند إضافة/تعديل/حذف المصروفات
+              مزامنة تلقائية مع Google Sheets
+            </label>
+
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={connection.calendarAutoSync}
+                onChange={(event) => {
+                  const next = {
+                    ...connection,
+                    calendarAutoSync: event.target.checked,
+                  };
+                  saveGoogleConnection(next);
+                  setConnection(next);
+                }}
+              />
+              مزامنة تلقائية مع Google Calendar (تذكيرات الاشتراكات)
             </label>
 
             <div className="flex flex-wrap gap-2 pt-1">
@@ -128,7 +158,7 @@ export function GoogleSheetsPanel() {
                       spreadsheetId: created.spreadsheetId,
                       spreadsheetUrl: created.spreadsheetUrl,
                       spreadsheetTitle: created.title,
-                      autoSync: true,
+                      sheetsAutoSync: true,
                     };
                     saveGoogleConnection(next);
                     await writeExpensesToSpreadsheet(
@@ -141,7 +171,7 @@ export function GoogleSheetsPanel() {
                 }
               >
                 <Link2 className="h-4 w-4" />
-                إنشاء جدول جديد ومزامنته
+                إنشاء جدول ومزامنة
               </button>
 
               <button
@@ -158,7 +188,7 @@ export function GoogleSheetsPanel() {
                       current.spreadsheetId,
                       expenses,
                     );
-                    setMessage("تمت المزامنة اليدوية بنجاح");
+                    setMessage("تمت المزامنة اليدوية");
                   })
                 }
               >
@@ -171,7 +201,7 @@ export function GoogleSheetsPanel() {
                 disabled={busy}
                 className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--danger)] disabled:opacity-50"
                 onClick={() => {
-                  disconnectGoogleSheets();
+                  disconnectGoogle();
                   setConnection(null);
                   setMessage("تم فصل حساب Google");
                 }}
@@ -188,12 +218,15 @@ export function GoogleSheetsPanel() {
             className="rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
             onClick={() =>
               void run(async () => {
-                await connectGoogleSheets();
-                setMessage("تم تسجيل الدخول بحساب Google. أنشئ جدولًا للمزامنة.");
+                const connected = await connectGoogle();
+                await elevateIfAdminEmail(connected.email);
+                setMessage(
+                  "تم الربط بكل صلاحيات Google (Sheets + Drive + Calendar)",
+                );
               })
             }
           >
-            ربط حساب Gmail / Google
+            ربط حساب Google — كل الصلاحيات مرة واحدة
           </button>
         )}
 
@@ -209,98 +242,25 @@ export function GoogleSheetsPanel() {
         )}
       </section>
 
-      <details open className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm leading-7 text-[var(--muted-foreground)]">
+      <details className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm leading-7 text-[var(--muted-foreground)]">
         <summary className="cursor-pointer font-medium text-[var(--foreground)]">
-          دليل الاستخدام الكامل — Google Sheets
+          دليل الإعداد — Google Cloud
         </summary>
-        <div className="mt-3 space-y-4">
-          <div>
-            <p className="mb-1 font-medium text-[var(--foreground)]">
-              أ) إعداد مرة واحدة (ضروري للربط المباشر)
-            </p>
-            <ol className="list-decimal space-y-1 pe-5">
-              <li>
-                ادخل إلى{" "}
-                <a
-                  className="text-[var(--accent)] hover:underline"
-                  href="https://console.cloud.google.com/"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Google Cloud Console
-                </a>{" "}
-                بنفس حساب Gmail.
-              </li>
-              <li>أنشئ مشروعًا جديدًا باسم مثل «مصاريفي».</li>
-              <li>
-                من القائمة: APIs & Services ← Library ← فعّل{" "}
-                <strong className="text-[var(--foreground)]">Google Sheets API</strong> و{" "}
-                <strong className="text-[var(--foreground)]">Google Drive API</strong>.
-              </li>
-              <li>
-                APIs & Services ← OAuth consent screen ← External ← أدخل اسم التطبيق
-                «مصاريفي» وبريدك ثم Save.
-              </li>
-              <li>
-                Credentials ← Create Credentials ← OAuth client ID ← Application type:{" "}
-                <strong className="text-[var(--foreground)]">Web application</strong>.
-              </li>
-              <li>
-                في Authorized JavaScript origins أضف:
-                <br />
-                <code className="rounded bg-white px-1">http://localhost:3737</code>
-                <br />
-                وبعد النشر أضف رابط موقعك أيضًا.
-              </li>
-              <li>
-                انسخ Client ID إلى ملف{" "}
-                <code className="rounded bg-white px-1">.env.local</code>:
-                <br />
-                <code className="rounded bg-white px-1">
-                  NEXT_PUBLIC_GOOGLE_CLIENT_ID=xxxxxxxx.apps.googleusercontent.com
-                </code>
-              </li>
-              <li>أعد تشغيل التطبيق ثم ارجع هنا واضغط «ربط حساب Gmail».</li>
-            </ol>
-          </div>
-
-          <div>
-            <p className="mb-1 font-medium text-[var(--foreground)]">
-              ب) الاستخدام اليومي بعد الربط
-            </p>
-            <ol className="list-decimal space-y-1 pe-5">
-              <li>اضغط «ربط حساب Gmail / Google» واختر حسابك ووافق على الصلاحيات.</li>
-              <li>اضغط «إنشاء جدول جديد ومزامنته» — سيظهر جدول في Google Drive.</li>
-              <li>اترك خيار المزامنة التلقائية مفعّلاً.</li>
-              <li>
-                أي مصروف تضيفه أو تعدّله أو تحذفه في مصاريفي يُحدَّث في الشيت تلقائيًا.
-              </li>
-              <li>يمكنك فتح الجدول من الرابط الظاهر هنا في أي وقت.</li>
-            </ol>
-          </div>
-
-          <div>
-            <p className="mb-1 font-medium text-[var(--foreground)]">
-              ج) بدون إعداد Google Cloud (بديل سريع)
-            </p>
-            <ol className="list-decimal space-y-1 pe-5">
-              <li>من تبويب «تصدير» اختر الفترة.</li>
-              <li>اضغط Google Sheets — سيُنزَّل ملف CSV.</li>
-              <li>
-                افتح{" "}
-                <a
-                  className="text-[var(--accent)] hover:underline"
-                  href="https://sheets.google.com"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  sheets.google.com
-                </a>{" "}
-                ← ملف ← استيراد ← ارفع CSV.
-              </li>
-            </ol>
-          </div>
-        </div>
+        <ol className="mt-3 list-decimal space-y-1 pe-5">
+          <li>
+            فعّل: Google Sheets API + Google Drive API + Google Calendar API
+          </li>
+          <li>OAuth consent screen ← أضف النطاقات الثلاثة</li>
+          <li>
+            Authorized JavaScript origins:{" "}
+            <code className="rounded bg-white px-1">http://localhost:3737</code>{" "}
+            + رابط النشر
+          </li>
+          <li>
+            انسخ Client ID إلى{" "}
+            <code className="rounded bg-white px-1">NEXT_PUBLIC_GOOGLE_CLIENT_ID</code>
+          </li>
+        </ol>
       </details>
     </div>
   );

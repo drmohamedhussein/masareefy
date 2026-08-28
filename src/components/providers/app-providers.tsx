@@ -1,6 +1,8 @@
 "use client";
 
 import { ExpensesProvider } from "@/components/expenses/expenses-provider";
+import { AuthProvider } from "@/components/auth/auth-provider";
+import { ReminderScheduler } from "@/components/notifications/reminder-scheduler";
 import { AppShell } from "@/components/layout/app-shell";
 
 export function AppProviders({
@@ -12,7 +14,10 @@ export function AppProviders({
 }) {
   return (
     <ExpensesProvider>
-      <AppShell embed={embed}>{children}</AppShell>
+      <AuthProvider>
+        <ReminderScheduler />
+        <AppShell embed={embed}>{children}</AppShell>
+      </AuthProvider>
     </ExpensesProvider>
   );
 }

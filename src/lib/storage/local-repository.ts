@@ -9,7 +9,10 @@ import type {
   ExpenseQuery,
   Profile,
   RecurringExpense,
+  Subscription,
+  SubscriptionDraft,
 } from "@/core/types";
+import { nextRenewalFromDay } from "@/core/subscriptions";
 import type { ExpenseRepository } from "@/core/repository";
 import { mirrorLocalStorageToPreferences } from "@/lib/storage/preferences-bridge";
 
@@ -28,6 +31,7 @@ interface LocalStore {
   profile: Profile;
   expenses: Expense[];
   recurring: RecurringExpense[];
+  subscriptions: Subscription[];
 }
 
 function defaultStore(): LocalStore {
@@ -36,13 +40,42 @@ function defaultStore(): LocalStore {
     profile: {
       id: LOCAL_USER_ID,
       displayName: "أنا",
+      email: null,
+      role: "user",
       currency: "EGP",
       timezone: "Africa/Cairo",
       monthlyBudget: null,
+      adminPinHash: null,
       createdAt: now,
     },
     expenses: [],
     recurring: [],
+    subscriptions: [],
+  };
+}
+
+function migrateSubscription(
+  raw: Partial<Subscription> & { id: string },
+): Subscription {
+  const now = new Date().toISOString();
+  const renewalDay = raw.renewalDay ?? 1;
+  return {
+    id: raw.id,
+    title: raw.title ?? "",
+    amount: raw.amount ?? null,
+    cycle: raw.cycle ?? "monthly",
+    renewalDay,
+    nextRenewalDate:
+      raw.nextRenewalDate ?? nextRenewalFromDay(renewalDay),
+    expenseId: raw.expenseId ?? null,
+    notifyEnabled: raw.notifyEnabled ?? false,
+    notifyDaysBefore: raw.notifyDaysBefore ?? 1,
+    notifyTime: raw.notifyTime ?? "09:00",
+    googleCalendarEventId: raw.googleCalendarEventId ?? null,
+    active: raw.active ?? true,
+    notes: raw.notes ?? null,
+    createdAt: raw.createdAt ?? now,
+    updatedAt: raw.updatedAt ?? now,
   };
 }
 
@@ -61,6 +94,7 @@ function migrateExpense(raw: Partial<Expense> & { id: string }): Expense {
     tags: normalizeTags(raw.tags),
     notes: raw.notes ?? null,
     spentOn,
+    subscriptionId: raw.subscriptionId ?? null,
     createdAt,
     updatedAt: raw.updatedAt ?? createdAt,
   };
@@ -79,10 +113,18 @@ function parseStorePayload(
     profile: {
       ...defaultStore().profile,
       ...parsed.profile,
+      email: parsed.profile.email ?? null,
+      role: parsed.profile.role ?? "user",
+      adminPinHash: parsed.profile.adminPinHash ?? null,
       monthlyBudget: parsed.profile.monthlyBudget ?? null,
     },
     expenses: parsed.expenses.map(migrateExpense),
     recurring: Array.isArray(parsed.recurring) ? parsed.recurring : [],
+    subscriptions: Array.isArray(parsed.subscriptions)
+      ? parsed.subscriptions.map((s) =>
+          migrateSubscription(s as Partial<Subscription> & { id: string }),
+        )
+      : [],
   };
 }
 
@@ -121,12 +163,28 @@ function mergeStores(stores: LocalStore[]): LocalStore {
   const recurring =
     stores.find((store) => store.recurring.length > 0)?.recurring ?? [];
 
+  const subById = new Map<string, Subscription>();
+  for (const store of stores) {
+    for (const sub of store.subscriptions ?? []) {
+      const existing = subById.get(sub.id);
+      if (
+        !existing ||
+        sub.updatedAt.localeCompare(existing.updatedAt) > 0
+      ) {
+        subById.set(sub.id, sub);
+      }
+    }
+  }
+
   return {
     profile: { ...base.profile, ...profile },
     expenses: [...byId.values()].sort((a, b) =>
       b.createdAt.localeCompare(a.createdAt),
     ),
     recurring,
+    subscriptions: [...subById.values()].sort((a, b) =>
+      a.nextRenewalDate.localeCompare(b.nextRenewalDate),
+    ),
   };
 }
 
@@ -203,6 +261,7 @@ export class LocalExpenseRepository implements ExpenseRepository {
       tags: normalizeTags(draft.tags),
       notes: draft.notes?.trim() ? draft.notes.trim() : null,
       spentOn: resolveSpentOn(draft.spentOn),
+      subscriptionId: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -257,6 +316,123 @@ export class LocalExpenseRepository implements ExpenseRepository {
   async deleteExpense(id: string): Promise<void> {
     const store = readStore();
     store.expenses = store.expenses.filter((item) => item.id !== id);
+    store.subscriptions = store.subscriptions.map((sub) =>
+      sub.expenseId === id ? { ...sub, expenseId: null } : sub,
+    );
+    writeStore(store);
+  }
+
+  async upsertExpenses(items: Expense[]): Promise<void> {
+    const store = readStore();
+    const byId = new Map(store.expenses.map((e) => [e.id, e]));
+    const now = new Date().toISOString();
+    for (const item of items) {
+      const existing = byId.get(item.id);
+      byId.set(item.id, {
+        ...item,
+        userId: LOCAL_USER_ID,
+        subscriptionId: item.subscriptionId ?? existing?.subscriptionId ?? null,
+        createdAt: existing?.createdAt ?? item.createdAt ?? now,
+        updatedAt: now,
+      });
+    }
+    store.expenses = [...byId.values()].sort((a, b) =>
+      b.createdAt.localeCompare(a.createdAt),
+    );
+    writeStore(store);
+  }
+
+  async listSubscriptions(): Promise<Subscription[]> {
+    return readStore().subscriptions;
+  }
+
+  async createSubscription(draft: SubscriptionDraft): Promise<Subscription> {
+    const store = readStore();
+    const now = new Date().toISOString();
+    const renewalDay = draft.renewalDay ?? 1;
+    const sub: Subscription = {
+      id: createId("sub"),
+      title: draft.title,
+      amount: draft.amount ?? null,
+      cycle: draft.cycle ?? "monthly",
+      renewalDay,
+      nextRenewalDate:
+        draft.nextRenewalDate ?? nextRenewalFromDay(renewalDay),
+      expenseId: draft.expenseId ?? null,
+      notifyEnabled: draft.notifyEnabled ?? false,
+      notifyDaysBefore: draft.notifyDaysBefore ?? 1,
+      notifyTime: draft.notifyTime ?? "09:00",
+      googleCalendarEventId: null,
+      active: draft.active ?? true,
+      notes: draft.notes ?? null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    store.subscriptions.unshift(sub);
+    if (sub.expenseId) {
+      store.expenses = store.expenses.map((e) =>
+        e.id === sub.expenseId ? { ...e, subscriptionId: sub.id } : e,
+      );
+    }
+    writeStore(store);
+    return sub;
+  }
+
+  async updateSubscription(
+    id: string,
+    patch: Partial<SubscriptionDraft>,
+  ): Promise<Subscription> {
+    const store = readStore();
+    const index = store.subscriptions.findIndex((s) => s.id === id);
+    if (index < 0) throw new Error("الاشتراك غير موجود");
+    const current = store.subscriptions[index]!;
+    const renewalDay = patch.renewalDay ?? current.renewalDay;
+    const updated: Subscription = {
+      ...current,
+      title: patch.title ?? current.title,
+      amount: patch.amount !== undefined ? patch.amount : current.amount,
+      cycle: patch.cycle ?? current.cycle,
+      renewalDay,
+      nextRenewalDate:
+        patch.nextRenewalDate ??
+        (patch.renewalDay != null
+          ? nextRenewalFromDay(renewalDay)
+          : current.nextRenewalDate),
+      expenseId:
+        patch.expenseId !== undefined ? patch.expenseId : current.expenseId,
+      notifyEnabled:
+        patch.notifyEnabled !== undefined
+          ? patch.notifyEnabled
+          : current.notifyEnabled,
+      notifyDaysBefore:
+        patch.notifyDaysBefore !== undefined
+          ? patch.notifyDaysBefore
+          : current.notifyDaysBefore,
+      notifyTime: patch.notifyTime ?? current.notifyTime,
+      googleCalendarEventId:
+        patch.googleCalendarEventId !== undefined
+          ? patch.googleCalendarEventId
+          : current.googleCalendarEventId,
+      active: patch.active !== undefined ? patch.active : current.active,
+      notes:
+        patch.notes !== undefined
+          ? patch.notes?.trim()
+            ? patch.notes.trim()
+            : null
+          : current.notes,
+      updatedAt: new Date().toISOString(),
+    };
+    store.subscriptions[index] = updated;
+    writeStore(store);
+    return updated;
+  }
+
+  async deleteSubscription(id: string): Promise<void> {
+    const store = readStore();
+    store.subscriptions = store.subscriptions.filter((s) => s.id !== id);
+    store.expenses = store.expenses.map((e) =>
+      e.subscriptionId === id ? { ...e, subscriptionId: null } : e,
+    );
     writeStore(store);
   }
 
@@ -266,7 +442,16 @@ export class LocalExpenseRepository implements ExpenseRepository {
 
   async updateProfile(
     patch: Partial<
-      Pick<Profile, "displayName" | "currency" | "timezone" | "monthlyBudget">
+      Pick<
+        Profile,
+        | "displayName"
+        | "email"
+        | "role"
+        | "currency"
+        | "timezone"
+        | "monthlyBudget"
+        | "adminPinHash"
+      >
     >,
   ): Promise<Profile> {
     const store = readStore();
@@ -276,6 +461,8 @@ export class LocalExpenseRepository implements ExpenseRepository {
         patch.displayName !== undefined
           ? patch.displayName
           : store.profile.displayName,
+      email: patch.email !== undefined ? patch.email : store.profile.email,
+      role: patch.role !== undefined ? patch.role : store.profile.role,
       currency:
         (patch.currency as CurrencyCode | undefined) ?? store.profile.currency,
       timezone: patch.timezone ?? store.profile.timezone,
@@ -283,6 +470,10 @@ export class LocalExpenseRepository implements ExpenseRepository {
         patch.monthlyBudget !== undefined
           ? patch.monthlyBudget
           : store.profile.monthlyBudget,
+      adminPinHash:
+        patch.adminPinHash !== undefined
+          ? patch.adminPinHash
+          : store.profile.adminPinHash,
     };
     writeStore(store);
     return store.profile;
@@ -305,4 +496,8 @@ export function createLocalRepository(): ExpenseRepository {
 
 export function createRecurringId(): string {
   return createId("rec");
+}
+
+export function createSubscriptionId(): string {
+  return createId("sub");
 }
