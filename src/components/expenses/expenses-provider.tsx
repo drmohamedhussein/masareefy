@@ -33,6 +33,8 @@ import {
   isSubscriptionExpense,
   subscriptionFromExpense,
 } from "@/core/subscriptions";
+import { ADMIN_EMAIL, ADMIN_INITIAL_PIN } from "@/lib/constants";
+import { hashPin } from "@/lib/auth/session";
 import { initPreferencesBridge } from "@/lib/storage/preferences-bridge";
 import {
   loadCalendarConnection,
@@ -156,6 +158,14 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
         await syncExpensesEverywhere(await repo.listExpenses());
       }
       await refresh();
+      const profileAfter = await repo.getProfile();
+      if (profileAfter && !profileAfter.adminPinHash && ADMIN_INITIAL_PIN) {
+        await repo.updateProfile({
+          adminPinHash: await hashPin(ADMIN_INITIAL_PIN),
+          ...(ADMIN_EMAIL ? { email: ADMIN_EMAIL, role: "admin" as const } : {}),
+        });
+        await refresh();
+      }
     })();
   }, [repo, refresh]);
 
@@ -301,6 +311,7 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
                   : null
                 : item.notes,
             spentOn: patch.spentOn ?? item.spentOn,
+            currency: patch.currency ?? item.currency,
             updatedAt: new Date().toISOString(),
           };
         }),

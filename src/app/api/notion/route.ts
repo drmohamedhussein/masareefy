@@ -126,6 +126,8 @@ function notionPageToExpense(
     ),
     notes: textFromRich(page.properties.Notes) || null,
     spentOn: dateProp?.date?.start?.slice(0, 10) ?? now.slice(0, 10),
+    currency: "EGP",
+    exchangeRateSnapshot: 1,
     subscriptionId: null,
     createdAt: now,
     updatedAt: now,

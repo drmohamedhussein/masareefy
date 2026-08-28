@@ -1,7 +1,8 @@
+import { expensePrimaryAmount } from "./currency";
 import { parseISODate, toISODate } from "./date-range";
 import { normalizeSpentOn } from "./spent-on";
 import { roundMoney } from "./money";
-import type { DailyBucket, Expense } from "./types";
+import type { CurrencyCode, DailyBucket, Expense } from "./types";
 
 export interface CalendarDayCell {
   date: string;
@@ -16,6 +17,7 @@ export function buildMonthGrid(
   monthIndex: number,
   expenses: Expense[],
   today: string = toISODate(new Date()),
+  primaryCurrency: CurrencyCode = "EGP",
 ): CalendarDayCell[] {
   const first = new Date(year, monthIndex, 1);
   const startOffset = first.getDay(); // Sunday = 0
@@ -30,7 +32,10 @@ export function buildMonthGrid(
       count: 0,
     };
     if (expense.amount != null) {
-      bucket.total = roundMoney(bucket.total + expense.amount);
+      const primary = expensePrimaryAmount(expense, primaryCurrency);
+      if (primary != null) {
+        bucket.total = roundMoney(bucket.total + primary);
+      }
     }
     bucket.count += 1;
     totals.set(dateKey, bucket);

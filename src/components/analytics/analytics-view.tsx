@@ -19,17 +19,11 @@ import {
 } from "@/core";
 import type { CurrencyCode, DatePreset } from "@/core/types";
 import { useExpenses } from "@/components/expenses/expenses-provider";
+import { useI18n } from "@/components/providers/locale-provider";
 import { cn } from "@/lib/utils";
 
-const PRESETS: Array<{ id: DatePreset; label: string }> = [
-  { id: "today", label: "اليوم" },
-  { id: "this_week", label: "هذا الأسبوع" },
-  { id: "this_month", label: "هذا الشهر" },
-  { id: "last_month", label: "الشهر الماضي" },
-  { id: "custom", label: "فترة مخصصة" },
-];
-
 export function AnalyticsView() {
+  const { t } = useI18n();
   const { expenses, profile, loading } = useExpenses();
   const [preset, setPreset] = useState<DatePreset>("this_month");
   const [customFrom, setCustomFrom] = useState(todayISO());
@@ -46,9 +40,17 @@ export function AnalyticsView() {
     [preset, customFrom, customTo],
   );
 
+  const PRESETS: Array<{ id: DatePreset; label: string }> = [
+    { id: "today", label: t.analytics.presets.today },
+    { id: "this_week", label: t.analytics.presets.this_week },
+    { id: "this_month", label: t.analytics.presets.this_month },
+    { id: "last_month", label: t.analytics.presets.last_month },
+    { id: "custom", label: t.analytics.presets.custom },
+  ];
+
   const summary = useMemo(
-    () => summarizeAnalytics(expenses, range),
-    [expenses, range],
+    () => summarizeAnalytics(expenses, range, currency),
+    [expenses, range, currency],
   );
 
   const chartData = useMemo(
@@ -65,7 +67,7 @@ export function AnalyticsView() {
   if (loading) {
     return (
       <div className="rounded-xl border border-[var(--border)] bg-white p-8 text-sm text-[var(--muted-foreground)]">
-        جاري تحميل الإحصاءات…
+        {t.analytics.loading}
       </div>
     );
   }
@@ -73,10 +75,8 @@ export function AnalyticsView() {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight">الإحصاءات</h1>
-        <p className="text-sm text-[var(--muted-foreground)]">
-          تابع صرفك حسب الفترة التي تختارها
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t.analytics.title}</h1>
+        <p className="text-sm text-[var(--muted-foreground)]">{t.analytics.subtitle}</p>
       </header>
 
       <div className="flex flex-wrap gap-2">

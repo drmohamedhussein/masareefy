@@ -1,10 +1,19 @@
+import { expensePrimaryAmount } from "./currency";
 import { daysInRange, eachDayInclusive, isDateInRange } from "./date-range";
 import { roundMoney, sumAmounts } from "./money";
-import type { AnalyticsSummary, DateRange, DailyBucket, Expense } from "./types";
+import type { AnalyticsSummary, CurrencyCode, DateRange, DailyBucket, Expense } from "./types";
+
+function primaryAmounts(
+  expenses: Expense[],
+  primaryCurrency: CurrencyCode,
+): Array<number | null> {
+  return expenses.map((e) => expensePrimaryAmount(e, primaryCurrency));
+}
 
 export function buildDailyBuckets(
   expenses: Expense[],
   range: DateRange,
+  primaryCurrency: CurrencyCode = "EGP",
 ): DailyBucket[] {
   const map = new Map<string, DailyBucket>();
 
@@ -17,7 +26,10 @@ export function buildDailyBuckets(
     const bucket = map.get(expense.spentOn);
     if (!bucket) continue;
     if (expense.amount != null) {
-      bucket.total = roundMoney(bucket.total + expense.amount);
+      const primary = expensePrimaryAmount(expense, primaryCurrency);
+      if (primary != null) {
+        bucket.total = roundMoney(bucket.total + primary);
+      }
     }
     bucket.count += 1;
   }
@@ -25,7 +37,10 @@ export function buildDailyBuckets(
   return Array.from(map.values());
 }
 
-export function summarizeByTag(expenses: Expense[]): Array<{
+export function summarizeByTag(
+  expenses: Expense[],
+  primaryCurrency: CurrencyCode = "EGP",
+): Array<{
   tag: string;
   total: number;
   count: number;
@@ -37,7 +52,10 @@ export function summarizeByTag(expenses: Expense[]): Array<{
       const current = map.get(tag) ?? { total: 0, count: 0 };
       current.count += 1;
       if (expense.amount != null) {
-        current.total = roundMoney(current.total + expense.amount);
+        const primary = expensePrimaryAmount(expense, primaryCurrency);
+        if (primary != null) {
+          current.total = roundMoney(current.total + primary);
+        }
       }
       map.set(tag, current);
     }
@@ -50,10 +68,11 @@ export function summarizeByTag(expenses: Expense[]): Array<{
 export function summarizeAnalytics(
   expenses: Expense[],
   range: DateRange,
+  primaryCurrency: CurrencyCode = "EGP",
 ): AnalyticsSummary {
   const inRange = expenses.filter((expense) => isDateInRange(expense.spentOn, range));
-  const dailySpending = buildDailyBuckets(inRange, range);
-  const totalSpent = sumAmounts(inRange.map((e) => e.amount));
+  const dailySpending = buildDailyBuckets(inRange, range, primaryCurrency);
+  const totalSpent = sumAmounts(primaryAmounts(inRange, primaryCurrency));
   const purchaseCount = inRange.length;
   const dayCount = Math.max(daysInRange(range), 1);
   const dailyAverage = roundMoney(totalSpent / dayCount);
@@ -79,17 +98,20 @@ export function summarizeAnalytics(
     highestSpendingDay: peakDay,
     dailySpending,
     topExpenses,
-    byTag: summarizeByTag(inRange),
+    byTag: summarizeByTag(inRange, primaryCurrency),
   };
 }
 
-export function totalForExpenses(expenses: Expense[]): {
+export function totalForExpenses(
+  expenses: Expense[],
+  primaryCurrency: CurrencyCode = "EGP",
+): {
   count: number;
   total: number;
 } {
   return {
     count: expenses.length,
-    total: sumAmounts(expenses.map((e) => e.amount)),
+    total: sumAmounts(primaryAmounts(expenses, primaryCurrency)),
   };
 }
 

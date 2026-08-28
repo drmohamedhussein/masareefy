@@ -12,11 +12,13 @@ import { formatMoney, todayISO, parseISODate } from "@/core";
 import type { CurrencyCode } from "@/core/types";
 import { useExpenses } from "@/components/expenses/expenses-provider";
 import { useClientMounted } from "@/lib/hooks/use-client-mounted";
+import { useI18n } from "@/components/providers/locale-provider";
 import { cn } from "@/lib/utils";
 
-const WEEKDAYS = ["أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
+const WEEKDAYS_FALLBACK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function CalendarView() {
+  const { t } = useI18n();
   const router = useRouter();
   const {
     expenses,
@@ -38,9 +40,11 @@ export function CalendarView() {
   const today = todayISO();
 
   const cells = useMemo(
-    () => buildMonthGrid(cursor.year, cursor.monthIndex, expenses, today),
-    [cursor.year, cursor.monthIndex, expenses, today],
+    () => buildMonthGrid(cursor.year, cursor.monthIndex, expenses, today, currency),
+    [cursor.year, cursor.monthIndex, expenses, today, currency],
   );
+
+  const weekdays = t.calendar.weekdays ?? WEEKDAYS_FALLBACK;
 
   const monthTotal = useMemo(() => {
     return cells
@@ -78,7 +82,7 @@ export function CalendarView() {
         className="rounded-xl border border-[var(--border)] bg-white p-8 text-sm text-[var(--muted-foreground)]"
         suppressHydrationWarning
       >
-        جاري تحميل التقويم…
+        {t.calendar.loading}
       </div>
     );
   }
@@ -87,7 +91,8 @@ export function CalendarView() {
     <div className="space-y-4">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">التقويم</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t.calendar.title}</h1>
+          <p className="text-sm text-[var(--muted-foreground)]">{t.calendar.subtitle}</p>
           <p className="text-sm text-[var(--muted-foreground)]">
             اضغط على يوم لعرض مصروفاته أو أضف بسرعة
           </p>
@@ -165,7 +170,7 @@ export function CalendarView() {
 
       <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-white shadow-[var(--shadow-sm)]">
         <div className="grid grid-cols-7 border-b border-[var(--border)] bg-[var(--surface)] text-center text-xs text-[var(--muted-foreground)]">
-          {WEEKDAYS.map((day) => (
+          {weekdays.map((day) => (
             <div key={day} className="px-1 py-2 font-medium">
               {day}
             </div>

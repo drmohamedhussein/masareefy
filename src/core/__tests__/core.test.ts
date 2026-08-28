@@ -15,6 +15,8 @@ function expense(partial: Partial<Expense> & Pick<Expense, "id" | "amount" | "it
     subscriptionId: null,
     createdAt: "2026-08-01T10:00:00.000Z",
     updatedAt: "2026-08-01T10:00:00.000Z",
+    currency: partial.currency ?? "EGP",
+    exchangeRateSnapshot: partial.exchangeRateSnapshot ?? 1,
     ...partial,
   };
 }
@@ -109,10 +111,21 @@ describe("analytics & filters", () => {
     expect(numbered.map((r) => r.rowNumber)).toEqual([1, 2]);
   });
 
-  it("computes footer totals", () => {
-    expect(totalForExpenses(rows.filter((r) => r.spentOn === "2026-08-27"))).toEqual({
-      count: 2,
-      total: 150,
+  it("computes footer totals in primary currency with exchange snapshot", () => {
+    const withUsd = [
+      ...rows.filter((r) => r.spentOn === "2026-08-27"),
+      expense({
+        id: "5",
+        amount: 100,
+        itemName: "plugin",
+        spentOn: "2026-08-27",
+        currency: "USD",
+        exchangeRateSnapshot: 50,
+      }),
+    ];
+    expect(totalForExpenses(withUsd, "EGP")).toEqual({
+      count: 3,
+      total: 5150,
     });
   });
 

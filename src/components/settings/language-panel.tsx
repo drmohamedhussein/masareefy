@@ -1,10 +1,17 @@
 "use client";
 
+import { useExpenses } from "@/components/expenses/expenses-provider";
 import { useI18n } from "@/components/providers/locale-provider";
 import type { Locale } from "@/lib/i18n";
 
 export function LanguagePanel() {
   const { locale, setLocale, t } = useI18n();
+  const { refresh } = useExpenses();
+
+  const changeLocale = async (value: Locale) => {
+    await setLocale(value);
+    await refresh();
+  };
 
   return (
     <section className="rounded-xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-sm)]">
@@ -22,7 +29,7 @@ export function LanguagePanel() {
           <button
             key={value}
             type="button"
-            onClick={() => void setLocale(value)}
+            onClick={() => void changeLocale(value)}
             className={`rounded-lg border px-4 py-2 text-sm ${
               locale === value
                 ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)] font-medium"

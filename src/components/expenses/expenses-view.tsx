@@ -40,9 +40,9 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
   const mounted = useClientMounted();
 
   const [focusNewRowId, setFocusNewRowId] = useState<string | null>(null);
-  const currency = (profile?.currency ?? "EGP") as CurrencyCode;
-  const currencyLabel = currency === "EGP" ? "ج.م" : currency;
-  const totals = totalForExpenses(visibleExpenses);
+  const primary = (profile?.currency ?? "EGP") as CurrencyCode;
+  const enabledCurrencies = profile?.enabledCurrencies ?? [primary];
+  const totals = totalForExpenses(visibleExpenses, primary);
   const rows = withSequentialNumbers(visibleExpenses);
 
   const monthRange = useMemo(() => resolveDateRange("this_month"), []);
@@ -50,8 +50,8 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
     const inMonth = expenses.filter(
       (e) => e.spentOn >= monthRange.from && e.spentOn <= monthRange.to,
     );
-    return totalForExpenses(inMonth).total;
-  }, [expenses, monthRange.from, monthRange.to]);
+    return totalForExpenses(inMonth, primary).total;
+  }, [expenses, monthRange.from, monthRange.to, primary]);
   const budget = budgetProgress(monthTotal, profile?.monthlyBudget ?? null);
 
   const handleAdd = useCallback(async () => {
@@ -93,10 +93,10 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
               : "border-[var(--border)] bg-white text-[var(--muted-foreground)]"
           }`}
         >
-          {t.expenses.budgetMonth}: {formatMoney(profile.monthlyBudget, currency)} — {t.expenses.spent}{" "}
-          {formatMoney(monthTotal, currency)}
+          {t.expenses.budgetMonth}: {formatMoney(profile.monthlyBudget, primary)} — {t.expenses.spent}{" "}
+          {formatMoney(monthTotal, primary)}
           {budget.remaining != null &&
-            ` — ${t.expenses.remaining} ${formatMoney(Math.max(budget.remaining, 0), currency)}`}
+            ` — ${t.expenses.remaining} ${formatMoney(Math.max(budget.remaining, 0), primary)}`}
           {budget.over && ` — ${t.expenses.overBudget}`}
         </div>
       )}
@@ -164,7 +164,7 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
 
       <ExpensesTable
         rows={rows}
-        currencyLabel={currencyLabel}
+        enabledCurrencies={enabledCurrencies}
         focusNewRowId={focusNewRowId}
         onClearFocusNewRow={() => setFocusNewRowId(null)}
         sortKey={sortKey}
@@ -194,7 +194,7 @@ export function ExpensesView({ compact = false }: { compact?: boolean }) {
         <p className="text-[var(--muted-foreground)]">
           {t.expenses.total}:{" "}
           <span className="font-semibold text-[var(--foreground)]">
-            {formatMoney(totals.total, currency)}
+            {formatMoney(totals.total, primary)}
           </span>
         </p>
       </footer>

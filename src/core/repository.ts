@@ -27,6 +27,8 @@ export interface ExpenseRepository {
         | "email"
         | "role"
         | "currency"
+        | "enabledCurrencies"
+        | "exchangeRates"
         | "timezone"
         | "monthlyBudget"
         | "adminPinHash"

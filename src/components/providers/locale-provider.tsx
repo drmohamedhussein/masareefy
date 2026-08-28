@@ -12,6 +12,7 @@ import {
   DEFAULT_LOCALE,
   getDictionary,
   getStoredLocale,
+  isLocale,
   persistLocale,
   type Dictionary,
   type Locale,
@@ -32,10 +33,20 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const stored = getStoredLocale();
-    setLocaleState(stored);
-    persistLocale(stored);
-    setReady(true);
+    void (async () => {
+      let initial = getStoredLocale();
+      try {
+        const profile = await getExpenseRepository().getProfile();
+        if (profile?.locale && isLocale(profile.locale)) {
+          initial = profile.locale;
+        }
+      } catch {
+        /* local only */
+      }
+      setLocaleState(initial);
+      persistLocale(initial);
+      setReady(true);
+    })();
   }, []);
 
   useEffect(() => {
@@ -47,12 +58,8 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const setLocale = useCallback(async (next: Locale) => {
     setLocaleState(next);
     persistLocale(next);
-    try {
-      const repo = getExpenseRepository();
-      await repo.updateProfile({ locale: next });
-    } catch {
-      /* profile may not support locale yet */
-    }
+    const repo = getExpenseRepository();
+    await repo.updateProfile({ locale: next });
   }, []);
 
   const value = useMemo<LocaleContextValue>(

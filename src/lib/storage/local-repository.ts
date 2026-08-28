@@ -1,3 +1,8 @@
+import {
+  isCurrencyCode,
+  normalizeEnabledCurrencies,
+  snapshotExchangeRate,
+} from "@/core/currency";
 import { filterExpenses } from "@/core/expense-filters";
 import { todayISO } from "@/core/date-range";
 import { normalizeTags } from "@/core/export";
@@ -44,6 +49,8 @@ function defaultStore(): LocalStore {
       role: "user",
       locale: "en",
       currency: "EGP",
+      enabledCurrencies: ["EGP"],
+      exchangeRates: {},
       timezone: "Africa/Cairo",
       monthlyBudget: null,
       adminPinHash: null,
@@ -80,12 +87,17 @@ function migrateSubscription(
   };
 }
 
-function migrateExpense(raw: Partial<Expense> & { id: string }): Expense {
+function migrateExpense(
+  raw: Partial<Expense> & { id: string },
+  primary: CurrencyCode = "EGP",
+): Expense {
   const createdAt = raw.createdAt ?? new Date().toISOString();
   const spentOn =
     normalizeSpentOn(raw.spentOn) ??
     normalizeSpentOn(createdAt.slice(0, 10)) ??
     todayISO();
+  const currency =
+    raw.currency && isCurrencyCode(raw.currency) ? raw.currency : primary;
 
   return {
     id: raw.id,
@@ -95,6 +107,13 @@ function migrateExpense(raw: Partial<Expense> & { id: string }): Expense {
     tags: normalizeTags(raw.tags),
     notes: raw.notes ?? null,
     spentOn,
+    currency,
+    exchangeRateSnapshot:
+      typeof raw.exchangeRateSnapshot === "number" &&
+      Number.isFinite(raw.exchangeRateSnapshot) &&
+      raw.exchangeRateSnapshot > 0
+        ? raw.exchangeRateSnapshot
+        : 1,
     subscriptionId: raw.subscriptionId ?? null,
     createdAt,
     updatedAt: raw.updatedAt ?? createdAt,
@@ -110,6 +129,11 @@ function parseStorePayload(
     return null;
   }
 
+  const primary =
+    parsed.profile.currency && isCurrencyCode(parsed.profile.currency)
+      ? parsed.profile.currency
+      : "EGP";
+
   return {
     profile: {
       ...defaultStore().profile,
@@ -117,10 +141,16 @@ function parseStorePayload(
       email: parsed.profile.email ?? null,
       role: parsed.profile.role ?? "user",
       locale: parsed.profile.locale === "ar" ? "ar" : "en",
+      currency: primary,
+      enabledCurrencies: normalizeEnabledCurrencies(
+        parsed.profile.enabledCurrencies as CurrencyCode[] | undefined,
+        primary,
+      ),
+      exchangeRates: parsed.profile.exchangeRates ?? {},
       adminPinHash: parsed.profile.adminPinHash ?? null,
       monthlyBudget: parsed.profile.monthlyBudget ?? null,
     },
-    expenses: parsed.expenses.map(migrateExpense),
+    expenses: parsed.expenses.map((e) => migrateExpense(e, primary)),
     recurring: Array.isArray(parsed.recurring) ? parsed.recurring : [],
     subscriptions: Array.isArray(parsed.subscriptions)
       ? parsed.subscriptions.map((s) =>
@@ -255,6 +285,11 @@ export class LocalExpenseRepository implements ExpenseRepository {
   async createExpense(draft: ExpenseDraft): Promise<Expense> {
     const store = readStore();
     const now = new Date().toISOString();
+    const primary = store.profile.currency;
+    const currency =
+      draft.currency && isCurrencyCode(draft.currency)
+        ? draft.currency
+        : primary;
     const expense: Expense = {
       id: createId(),
       userId: LOCAL_USER_ID,
@@ -263,6 +298,8 @@ export class LocalExpenseRepository implements ExpenseRepository {
       tags: normalizeTags(draft.tags),
       notes: draft.notes?.trim() ? draft.notes.trim() : null,
       spentOn: resolveSpentOn(draft.spentOn),
+      currency,
+      exchangeRateSnapshot: snapshotExchangeRate(store.profile, currency),
       subscriptionId: null,
       createdAt: now,
       updatedAt: now,
@@ -284,6 +321,11 @@ export class LocalExpenseRepository implements ExpenseRepository {
     }
 
     const current = store.expenses[index]!;
+    const nextCurrency =
+      patch.currency && isCurrencyCode(patch.currency)
+        ? patch.currency
+        : current.currency;
+    const currencyChanged = nextCurrency !== current.currency;
     const nextAmount =
       patch.amount !== undefined
         ? patch.amount != null && patch.amount > 0
@@ -307,6 +349,10 @@ export class LocalExpenseRepository implements ExpenseRepository {
         patch.spentOn !== undefined
           ? resolveSpentOn(patch.spentOn, current.spentOn)
           : current.spentOn,
+      currency: nextCurrency,
+      exchangeRateSnapshot: currencyChanged
+        ? snapshotExchangeRate(store.profile, nextCurrency)
+        : current.exchangeRateSnapshot,
       updatedAt: new Date().toISOString(),
     };
 
@@ -330,13 +376,16 @@ export class LocalExpenseRepository implements ExpenseRepository {
     const now = new Date().toISOString();
     for (const item of items) {
       const existing = byId.get(item.id);
-      byId.set(item.id, {
-        ...item,
-        userId: LOCAL_USER_ID,
-        subscriptionId: item.subscriptionId ?? existing?.subscriptionId ?? null,
-        createdAt: existing?.createdAt ?? item.createdAt ?? now,
-        updatedAt: now,
-      });
+      byId.set(item.id, migrateExpense(
+        {
+          ...item,
+          userId: LOCAL_USER_ID,
+          subscriptionId: item.subscriptionId ?? existing?.subscriptionId ?? null,
+          createdAt: existing?.createdAt ?? item.createdAt ?? now,
+          updatedAt: now,
+        },
+        store.profile.currency,
+      ));
     }
     store.expenses = [...byId.values()].sort((a, b) =>
       b.createdAt.localeCompare(a.createdAt),
@@ -450,6 +499,8 @@ export class LocalExpenseRepository implements ExpenseRepository {
         | "email"
         | "role"
         | "currency"
+        | "enabledCurrencies"
+        | "exchangeRates"
         | "timezone"
         | "monthlyBudget"
         | "adminPinHash"
@@ -458,6 +509,10 @@ export class LocalExpenseRepository implements ExpenseRepository {
     >,
   ): Promise<Profile> {
     const store = readStore();
+    const nextPrimary =
+      patch.currency && isCurrencyCode(patch.currency)
+        ? patch.currency
+        : store.profile.currency;
     store.profile = {
       ...store.profile,
       displayName:
@@ -466,8 +521,18 @@ export class LocalExpenseRepository implements ExpenseRepository {
           : store.profile.displayName,
       email: patch.email !== undefined ? patch.email : store.profile.email,
       role: patch.role !== undefined ? patch.role : store.profile.role,
-      currency:
-        (patch.currency as CurrencyCode | undefined) ?? store.profile.currency,
+      currency: nextPrimary,
+      enabledCurrencies:
+        patch.enabledCurrencies !== undefined
+          ? normalizeEnabledCurrencies(patch.enabledCurrencies, nextPrimary)
+          : normalizeEnabledCurrencies(
+              store.profile.enabledCurrencies,
+              nextPrimary,
+            ),
+      exchangeRates:
+        patch.exchangeRates !== undefined
+          ? patch.exchangeRates
+          : store.profile.exchangeRates,
       timezone: patch.timezone ?? store.profile.timezone,
       monthlyBudget:
         patch.monthlyBudget !== undefined

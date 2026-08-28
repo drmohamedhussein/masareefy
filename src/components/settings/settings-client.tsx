@@ -9,6 +9,7 @@ import { NotionPanel } from "@/components/settings/notion-panel";
 import { RecurringPanel } from "@/components/settings/recurring-panel";
 import { useExpenses } from "@/components/expenses/expenses-provider";
 import { LanguagePanel } from "@/components/settings/language-panel";
+import { CurrencyPanel } from "@/components/settings/currency-panel";
 import { useI18n } from "@/components/providers/locale-provider";
 import { getExpenseRepository } from "@/lib/storage/get-repository";
 import { cn } from "@/lib/utils";
@@ -88,6 +89,7 @@ export function SettingsClient() {
       {tab === "general" && (
         <div className="space-y-4">
           <LanguagePanel />
+          <CurrencyPanel />
           <section className="rounded-xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-sm)]">
             <h2 className="mb-3 font-medium">{t.settings.installTitle}</h2>
             {installed ? (
@@ -146,11 +148,6 @@ export function SettingsClient() {
               </button>
             </div>
           </section>
-
-          <div className="rounded-xl border border-[var(--border)] bg-white p-5 text-sm shadow-[var(--shadow-sm)]">
-            <p className="mb-1 font-medium">{t.settings.currencyTitle}</p>
-            <p className="text-[var(--muted-foreground)]">{t.settings.currencyValue}</p>
-          </div>
 
           <div className="rounded-xl border border-[var(--border)] bg-white p-5 text-sm shadow-[var(--shadow-sm)]">
             <p className="mb-1 font-medium">{t.settings.storageTitle}</p>

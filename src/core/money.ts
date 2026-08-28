@@ -6,10 +6,25 @@ const CURRENCY_META: Record<
 > = {
   EGP: { locale: "ar-EG", symbol: "ج.م", currencyDisplay: "symbol" },
   USD: { locale: "en-US", symbol: "$", currencyDisplay: "symbol" },
+  EUR: { locale: "de-DE", symbol: "€", currencyDisplay: "symbol" },
+  GBP: { locale: "en-GB", symbol: "£", currencyDisplay: "symbol" },
   SAR: { locale: "ar-SA", symbol: "ر.س", currencyDisplay: "symbol" },
   AED: { locale: "ar-AE", symbol: "د.إ", currencyDisplay: "symbol" },
-  EUR: { locale: "de-DE", symbol: "€", currencyDisplay: "symbol" },
+  KWD: { locale: "ar-KW", symbol: "د.ك", currencyDisplay: "symbol" },
+  QAR: { locale: "ar-QA", symbol: "ر.ق", currencyDisplay: "symbol" },
+  BHD: { locale: "ar-BH", symbol: "د.ب", currencyDisplay: "symbol" },
+  OMR: { locale: "ar-OM", symbol: "ر.ع", currencyDisplay: "symbol" },
+  JOD: { locale: "ar-JO", symbol: "د.أ", currencyDisplay: "symbol" },
+  TRY: { locale: "tr-TR", symbol: "₺", currencyDisplay: "symbol" },
+  CAD: { locale: "en-CA", symbol: "C$", currencyDisplay: "symbol" },
+  AUD: { locale: "en-AU", symbol: "A$", currencyDisplay: "symbol" },
+  CHF: { locale: "de-CH", symbol: "CHF", currencyDisplay: "code" },
+  INR: { locale: "en-IN", symbol: "₹", currencyDisplay: "symbol" },
 };
+
+export function currencySymbol(currency: CurrencyCode): string {
+  return CURRENCY_META[currency].symbol;
+}
 
 export function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;

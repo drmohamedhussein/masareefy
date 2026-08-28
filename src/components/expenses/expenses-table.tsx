@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
-import type { Expense } from "@/core/types";
+import type { CurrencyCode, Expense } from "@/core/types";
+import { currencySymbol } from "@/core/money";
 import { DEFAULT_TAGS } from "@/core/types";
 import { parseAmountInput, isBlankAmountInput } from "@/core/money";
 import { normalizeTags } from "@/core/export";
 import { SubscriptionReminderButton } from "@/components/expenses/subscription-reminder-button";
+import { useI18n } from "@/components/providers/locale-provider";
 import { cn } from "@/lib/utils";
 
 type FocusField = "amount" | "itemName" | "tags" | "notes";
@@ -15,12 +17,14 @@ const FIELD_ORDER: FocusField[] = ["amount", "itemName", "tags", "notes"];
 
 interface ExpensesTableProps {
   rows: Array<Expense & { rowNumber: number }>;
-  currencyLabel: string;
+  enabledCurrencies: CurrencyCode[];
   focusNewRowId?: string | null;
   onClearFocusNewRow?: () => void;
   onUpdate: (
     id: string,
-    patch: Partial<Pick<Expense, "amount" | "itemName" | "tags" | "notes">>,
+    patch: Partial<
+      Pick<Expense, "amount" | "itemName" | "tags" | "notes" | "currency">
+    >,
   ) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onRequestAdd: () => Promise<void>;
@@ -131,7 +135,7 @@ function CellInput({
 
 export function ExpensesTable({
   rows,
-  currencyLabel,
+  enabledCurrencies,
   focusNewRowId,
   onClearFocusNewRow,
   onUpdate,
@@ -143,6 +147,7 @@ export function ExpensesTable({
   sortKey,
   sortDirection,
 }: ExpensesTableProps) {
+  const { t } = useI18n();
   const [focusTarget, setFocusTarget] = useState<{
     id: string;
     field: FocusField;
@@ -209,6 +214,12 @@ export function ExpensesTable({
   const sortMark = (key: string) =>
     sortKey === key ? (sortDirection === "asc" ? " ↑" : " ↓") : "";
 
+  const cycleCurrency = (current: CurrencyCode): CurrencyCode => {
+    const list = enabledCurrencies.length > 0 ? enabledCurrencies : [current];
+    const index = list.indexOf(current);
+    return list[(index + 1) % list.length] ?? current;
+  };
+
   return (
     <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-white shadow-[var(--shadow-sm)]">
       <datalist id="masareefy-tags">
@@ -223,28 +234,28 @@ export function ExpensesTable({
               <th className="w-14 px-3 py-2.5 text-start font-medium">#</th>
               <th className="w-32 px-1 py-2.5 text-start font-medium">
                 <button type="button" tabIndex={-1} className="rounded px-2 py-1 hover:bg-[var(--hover)]" onClick={onSortAmount}>
-                  السعر{sortMark("amount")}
+                  {t.table.price}{sortMark("amount")}
                 </button>
               </th>
               <th className="min-w-[160px] px-1 py-2.5 text-start font-medium">
                 <button type="button" tabIndex={-1} className="rounded px-2 py-1 hover:bg-[var(--hover)]" onClick={onSortName}>
-                  اسم المشتريات{sortMark("itemName")}
+                  {t.table.itemName}{sortMark("itemName")}
                 </button>
               </th>
               <th className="min-w-[140px] px-1 py-2.5 text-start font-medium">
                 <button type="button" tabIndex={-1} className="rounded px-2 py-1 hover:bg-[var(--hover)]" onClick={onSortTags}>
-                  التصنيف{sortMark("tags")}
+                  {t.table.category}{sortMark("tags")}
                 </button>
               </th>
-              <th className="min-w-[160px] px-3 py-2.5 text-start font-medium">ملاحظات</th>
-              <th className="w-20 px-2 py-2.5" aria-label="تذكير وحذف" />
+              <th className="min-w-[160px] px-3 py-2.5 text-start font-medium">{t.table.notes}</th>
+              <th className="w-20 px-2 py-2.5" aria-label={t.table.actions} />
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-12 text-center text-[var(--muted-foreground)]">
-                  لا توجد مصروفات في هذا اليوم. اضغط «إضافة مصروف» للبدء.
+                  {t.expenses.empty}
                 </td>
               </tr>
             ) : (
@@ -256,7 +267,7 @@ export function ExpensesTable({
                       <CellInput
                         rowId={row.id}
                         field="amount"
-                        ariaLabel={`سعر ${row.itemName || "المصروف"}`}
+                        ariaLabel={`${t.table.price} ${row.itemName || t.expenses.title}`}
                         value={row.amount == null ? "" : String(row.amount)}
                         inputMode="decimal"
                         autoFocus={focusTarget?.id === row.id && focusTarget.field === "amount"}
@@ -272,16 +283,29 @@ export function ExpensesTable({
                         }}
                         onMove={(direction) => moveFrom(row.id, "amount", direction)}
                       />
-                      <span className="pe-2 text-xs text-[var(--muted)]">{currencyLabel}</span>
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        title={t.table.changeCurrency}
+                        className="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent-soft)]"
+                        onClick={() => {
+                          const next = cycleCurrency(row.currency);
+                          if (next !== row.currency) {
+                            void onUpdate(row.id, { currency: next });
+                          }
+                        }}
+                      >
+                        {currencySymbol(row.currency)}
+                      </button>
                     </div>
                   </td>
                   <td className="px-0 py-0">
                     <CellInput
                       rowId={row.id}
                       field="itemName"
-                      ariaLabel="اسم المشتريات"
+                      ariaLabel={t.table.itemName}
                       value={row.itemName}
-                      placeholder="اسم الحاجة"
+                      placeholder={t.table.itemPlaceholder}
                       autoFocus={focusTarget?.id === row.id && focusTarget.field === "itemName"}
                       onCommit={(next) => void onUpdate(row.id, { itemName: next })}
                       onMove={(direction) => moveFrom(row.id, "itemName", direction)}
@@ -291,9 +315,9 @@ export function ExpensesTable({
                     <CellInput
                       rowId={row.id}
                       field="tags"
-                      ariaLabel="التصنيف / الوسوم"
+                      ariaLabel={t.table.category}
                       value={(row.tags ?? []).join(", ")}
-                      placeholder="وسم مثل: طعام"
+                      placeholder={t.table.tagPlaceholder}
                       listId="masareefy-tags"
                       autoFocus={focusTarget?.id === row.id && focusTarget.field === "tags"}
                       onCommit={(next) =>
@@ -306,9 +330,9 @@ export function ExpensesTable({
                     <CellInput
                       rowId={row.id}
                       field="notes"
-                      ariaLabel="ملاحظات"
+                      ariaLabel={t.table.notes}
                       value={row.notes ?? ""}
-                      placeholder="اختياري"
+                      placeholder={t.table.notesOptional}
                       autoFocus={focusTarget?.id === row.id && focusTarget.field === "notes"}
                       onCommit={(next) => void onUpdate(row.id, { notes: next })}
                       onMove={(direction) => moveFrom(row.id, "notes", direction)}
@@ -320,7 +344,7 @@ export function ExpensesTable({
                       <button
                         type="button"
                         tabIndex={-1}
-                        aria-label="حذف المصروف"
+                        aria-label={t.table.deleteExpense}
                         className="rounded p-1.5 text-[var(--muted)] opacity-0 transition hover:bg-red-50 hover:text-[var(--danger)] group-hover:opacity-100 focus:opacity-100"
                         onClick={() => void onDelete(row.id)}
                       >

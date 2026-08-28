@@ -97,7 +97,7 @@ export function AdminClient() {
         <div>
           <h1 className="text-2xl font-semibold">{t.admin.title}</h1>
           <p className="text-sm text-[var(--muted-foreground)]">
-            مرحباً {profile?.displayName ?? "أدمن"} — صلاحيات كاملة
+            {t.admin.welcome} {profile?.displayName ?? t.admin.title} — {t.admin.fullAccess}
           </p>
         </div>
         <button
@@ -112,17 +112,17 @@ export function AdminClient() {
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-sm)]">
-          <p className="text-xs text-[var(--muted)]">إجمالي المصروفات</p>
+          <p className="text-xs text-[var(--muted)]">{t.admin.totalExpenses}</p>
           <p className="text-xl font-semibold tabular-nums">
             {formatMoney(totalSpent, currency)}
           </p>
         </div>
         <div className="rounded-xl border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-sm)]">
-          <p className="text-xs text-[var(--muted)]">عدد السجلات</p>
+          <p className="text-xs text-[var(--muted)]">{t.admin.recordCount}</p>
           <p className="text-xl font-semibold">{expenses.length}</p>
         </div>
         <div className="rounded-xl border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-sm)]">
-          <p className="text-xs text-[var(--muted)]">الاشتراكات النشطة</p>
+          <p className="text-xs text-[var(--muted)]">{t.admin.activeSubs}</p>
           <p className="text-xl font-semibold">
             {subscriptions.filter((s) => s.active).length}
           </p>

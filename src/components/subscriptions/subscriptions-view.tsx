@@ -16,18 +16,16 @@ import {
 import type { CurrencyCode, SubscriptionCycle } from "@/core/types";
 import { useExpenses } from "@/components/expenses/expenses-provider";
 import { useClientMounted } from "@/lib/hooks/use-client-mounted";
+import { useI18n } from "@/components/providers/locale-provider";
 import {
   requestNotificationPermission,
 } from "@/lib/notifications/reminder-engine";
 import { cn } from "@/lib/utils";
 
-const CYCLE_LABELS: Record<SubscriptionCycle, string> = {
-  weekly: "أسبوعي",
-  monthly: "شهري",
-  yearly: "سنوي",
-};
+const CYCLE_KEYS = ["weekly", "monthly", "yearly"] as const;
 
 export function SubscriptionsView() {
+  const { t } = useI18n();
   const {
     subscriptions,
     profile,
@@ -63,7 +61,7 @@ export function SubscriptionsView() {
   if (!mounted || loading) {
     return (
       <div className="rounded-xl border border-[var(--border)] bg-white p-8 text-sm text-[var(--muted-foreground)]">
-        جاري تحميل الاشتراكات…
+        {t.subscriptions.loading}
       </div>
     );
   }
@@ -72,12 +70,8 @@ export function SubscriptionsView() {
     <div className="space-y-4">
       <header className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            الاشتراكات والتجديدات
-          </h1>
-          <p className="text-sm text-[var(--muted-foreground)]">
-            تتبع تجديداتك · إشعارات المتصفح · مزامنة Google Calendar
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t.subscriptions.title}</h1>
+          <p className="text-sm text-[var(--muted-foreground)]">{t.subscriptions.subtitle}</p>
         </div>
         <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
           <Calendar className="h-4 w-4" />
@@ -188,13 +182,11 @@ export function SubscriptionsView() {
                       }
                       className="rounded border border-transparent bg-transparent px-1 py-0.5 text-sm hover:border-[var(--border)]"
                     >
-                      {(Object.keys(CYCLE_LABELS) as SubscriptionCycle[]).map(
-                        (key) => (
-                          <option key={key} value={key}>
-                            {CYCLE_LABELS[key]}
-                          </option>
-                        ),
-                      )}
+                      {CYCLE_KEYS.map((key) => (
+                        <option key={key} value={key}>
+                          {t.subscriptions.cycles[key]}
+                        </option>
+                      ))}
                     </select>
                   </td>
                   <td className="px-2 py-2 tabular-nums text-[var(--foreground)]">
